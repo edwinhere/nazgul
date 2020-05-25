@@ -12,3 +12,7 @@ This library is to work with any 512-bit (64 byte output) hashing function. But 
 [Ristretto elliptic curve](https://doc.dalek.rs/curve25519_dalek/ristretto/) for ease of use and better security.
 
 This library is `#![no_std]` by default so it is possible to compile this library for embedded devices and WebAssembly but we haven't tried.
+
+# Documentation
+
+It is [here](https://docs.rs/nazgul/0.1.0/nazgul/)
