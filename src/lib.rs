@@ -22,6 +22,7 @@ extern crate rand_core;
 
 pub mod blsag;
 pub mod clsag;
+pub mod dlsag;
 pub mod mlsag;
 pub mod sag;
 pub mod traits;
