@@ -9,6 +9,7 @@
 //! The following scheme has also been implemented from outside [Z2M2](https://www.getmonero.org/library/Zero-to-Monero-2-0-0.pdf):
 //!
 //!  - [DLSAG: Non-Interactive Refund Transactions For Interoperable Payment Channels in Monero](https://eprint.iacr.org/2019/595.pdf)
+//!  - Multilayer DLSAG
 //!
 //! > All blockquotes (except this one) in this documentation are from [Z2M2](https://www.getmonero.org/library/Zero-to-Monero-2-0-0.pdf)
 //!
@@ -27,6 +28,7 @@ extern crate rand_core;
 pub mod blsag;
 pub mod clsag;
 pub mod dlsag;
+pub mod mdlsag;
 pub mod mlsag;
 pub mod sag;
 pub mod traits;
