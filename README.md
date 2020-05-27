@@ -6,6 +6,10 @@ A library that implements [Ring Signatures](https://en.wikipedia.org/wiki/Ring_s
  - Multilayer Linkable Spontaneous Anonymous Group (MLSAG) signatures
  - Concise Linkable Spontaneous Anonymous Group (CLSAG) signatures
 
+The following scheme has also been implemented from outside [Z2M2](https://www.getmonero.org/library/Zero-to-Monero-2-0-0.pdf):
+
+ - [DLSAG: Non-Interactive Refund Transactions For Interoperable Payment Channels in Monero](https://eprint.iacr.org/2019/595.pdf)
+
 > All blockquotes (except this one) in this documentation are from [Z2M2](https://www.getmonero.org/library/Zero-to-Monero-2-0-0.pdf)
 
 This library is to work with any 512-bit (64 byte output) hashing function. But it uses the
