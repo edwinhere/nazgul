@@ -12,7 +12,7 @@ The following scheme has also been implemented from outside [Z2M2](https://www.g
 
 > All blockquotes (except this one) in this documentation are from [Z2M2](https://www.getmonero.org/library/Zero-to-Monero-2-0-0.pdf)
 
-This library is to work with any 512-bit (64 byte output) hashing function. But it uses the
+This library is designed to work with any 512-bit (64 byte output) hashing function. It uses the
 [Ristretto elliptic curve](https://doc.dalek.rs/curve25519_dalek/ristretto/) for ease of use and better security.
 
 This library is `#![no_std]` by default so it is possible to compile this library for embedded devices and WebAssembly but we haven't tried.
