@@ -24,12 +24,12 @@ impl Sign<Scalar, Vec<RistrettoPoint>> for SAG {
     fn sign<Hash: Digest<OutputSize = U64> + Clone, CSPRNG: CryptoRng + RngCore + Default>(
         k: Scalar,
         mut ring: Vec<RistrettoPoint>,
+        secret_index: usize,
         message: &Vec<u8>,
     ) -> SAG {
         let mut csprng: CSPRNG = CSPRNG::default();
         let k_point: RistrettoPoint = k * constants::RISTRETTO_BASEPOINT_POINT;
         let n = ring.len() + 1;
-        let secret_index = (csprng.next_u32() % n as u32) as usize;
         ring.insert(secret_index, k_point);
         let a: Scalar = Scalar::random(&mut csprng);
         let mut rs: Vec<Scalar> = (0..n).map(|_| Scalar::random(&mut csprng)).collect();
@@ -115,6 +115,7 @@ mod test {
     fn sag() {
         let mut csprng = OsRng::default();
         let k: Scalar = Scalar::random(&mut csprng);
+        let secret_index = 1;
         let n = 2;
         let ring: Vec<RistrettoPoint> = (0..(n - 1)) // Prover is going to add our key into this mix
             .map(|_| RistrettoPoint::random(&mut csprng))
@@ -122,19 +123,19 @@ mod test {
         let message: Vec<u8> = b"This is the message".iter().cloned().collect();
 
         {
-            let signature = SAG::sign::<Sha512, OsRng>(k, ring.clone(), &message);
+            let signature = SAG::sign::<Sha512, OsRng>(k, ring.clone(), secret_index, &message);
             let result = SAG::verify::<Sha512>(signature, &message);
             assert!(result);
         }
 
         {
-            let signature = SAG::sign::<Keccak512, OsRng>(k, ring.clone(), &message);
+            let signature = SAG::sign::<Keccak512, OsRng>(k, ring.clone(), secret_index, &message);
             let result = SAG::verify::<Keccak512>(signature, &message);
             assert!(result);
         }
 
         {
-            let signature = SAG::sign::<Blake2b, OsRng>(k, ring.clone(), &message);
+            let signature = SAG::sign::<Blake2b, OsRng>(k, ring.clone(), secret_index, &message);
             let result = SAG::verify::<Blake2b>(signature, &message);
             assert!(result);
         }

@@ -10,6 +10,7 @@ pub trait Sign<PrivateKey, Ring> {
     >(
         k: PrivateKey,
         ring: Ring,
+        secret_index: usize,
         message: &Vec<u8>,
     ) -> Self;
 }

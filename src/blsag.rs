@@ -44,6 +44,7 @@ impl Sign<Scalar, Vec<RistrettoPoint>> for BLSAG {
     >(
         k: Scalar,
         mut ring: Vec<RistrettoPoint>,
+        secret_index: usize,
         message: &Vec<u8>,
     ) -> BLSAG {
         let mut csprng = CSPRNG::default();
@@ -54,9 +55,6 @@ impl Sign<Scalar, Vec<RistrettoPoint>> for BLSAG {
         let key_image: RistrettoPoint = BLSAG::generate_key_image::<Hash>(k);
 
         let n = ring.len() + 1;
-
-        // This is the index where the prover hides key
-        let secret_index = (csprng.next_u32() % n as u32) as usize;
 
         ring.insert(secret_index, k_point);
 
@@ -184,6 +182,7 @@ mod test {
     fn blsag() {
         let mut csprng = OsRng::default();
         let k: Scalar = Scalar::random(&mut csprng);
+        let secret_index = 1;
         let n = 2;
         let ring: Vec<RistrettoPoint> = (0..(n - 1)) // Prover is going to add our key into this mix
             .map(|_| RistrettoPoint::random(&mut csprng))
@@ -191,19 +190,20 @@ mod test {
         let message: Vec<u8> = b"This is the message".iter().cloned().collect();
 
         {
-            let signature = BLSAG::sign::<Sha512, OsRng>(k, ring.clone(), &message);
+            let signature = BLSAG::sign::<Sha512, OsRng>(k, ring.clone(), secret_index, &message);
             let result = BLSAG::verify::<Sha512>(signature, &message);
             assert!(result);
         }
 
         {
-            let signature = BLSAG::sign::<Keccak512, OsRng>(k, ring.clone(), &message);
+            let signature =
+                BLSAG::sign::<Keccak512, OsRng>(k, ring.clone(), secret_index, &message);
             let result = BLSAG::verify::<Keccak512>(signature, &message);
             assert!(result);
         }
 
         {
-            let signature = BLSAG::sign::<Blake2b, OsRng>(k, ring.clone(), &message);
+            let signature = BLSAG::sign::<Blake2b, OsRng>(k, ring.clone(), secret_index, &message);
             let result = BLSAG::verify::<Blake2b>(signature, &message);
             assert!(result);
         }
@@ -213,8 +213,9 @@ mod test {
                 .map(|_| RistrettoPoint::random(&mut csprng))
                 .collect();
         let another_message: Vec<u8> = b"This is another message".iter().cloned().collect();
-        let signature_1 = BLSAG::sign::<Blake2b, OsRng>(k, another_ring.clone(), &another_message);
-        let signature_2 = BLSAG::sign::<Blake2b, OsRng>(k, ring.clone(), &message);
+        let signature_1 =
+            BLSAG::sign::<Blake2b, OsRng>(k, another_ring.clone(), secret_index, &another_message);
+        let signature_2 = BLSAG::sign::<Blake2b, OsRng>(k, ring.clone(), secret_index, &message);
         let result = BLSAG::link(signature_1, signature_2);
         assert!(result);
     }

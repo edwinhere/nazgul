@@ -58,6 +58,7 @@ impl Sign<Vec<Scalar>, Vec<Vec<RistrettoPoint>>> for MLSAG {
     >(
         ks: Vec<Scalar>,
         mut ring: Vec<Vec<RistrettoPoint>>,
+        secret_index: usize,
         message: &Vec<u8>,
     ) -> MLSAG {
         let mut csprng = CSPRNG::default();
@@ -74,9 +75,6 @@ impl Sign<Vec<Scalar>, Vec<Vec<RistrettoPoint>>> for MLSAG {
             .collect();
 
         let key_images: Vec<RistrettoPoint> = MLSAG::generate_key_image::<Hash>(ks.clone());
-
-        // This is the index where we hide our keys
-        let secret_index = (csprng.next_u32() % nr as u32) as usize;
 
         ring.insert(secret_index, k_points.clone());
 
@@ -238,6 +236,7 @@ mod test {
     fn mlsag() {
         let mut csprng = OsRng::default();
 
+        let secret_index = 1;
         let nr = 2;
         let nc = 2;
 
@@ -254,19 +253,22 @@ mod test {
         let message: Vec<u8> = b"This is the message".iter().cloned().collect();
 
         {
-            let signature = MLSAG::sign::<Sha512, OsRng>(ks.clone(), ring.clone(), &message);
+            let signature =
+                MLSAG::sign::<Sha512, OsRng>(ks.clone(), ring.clone(), secret_index, &message);
             let result = MLSAG::verify::<Sha512>(signature, &message);
             assert!(result);
         }
 
         {
-            let signature = MLSAG::sign::<Keccak512, OsRng>(ks.clone(), ring.clone(), &message);
+            let signature =
+                MLSAG::sign::<Keccak512, OsRng>(ks.clone(), ring.clone(), secret_index, &message);
             let result = MLSAG::verify::<Keccak512>(signature, &message);
             assert!(result);
         }
 
         {
-            let signature = MLSAG::sign::<Blake2b, OsRng>(ks.clone(), ring.clone(), &message);
+            let signature =
+                MLSAG::sign::<Blake2b, OsRng>(ks.clone(), ring.clone(), secret_index, &message);
             let result = MLSAG::verify::<Blake2b>(signature, &message);
             assert!(result);
         }
@@ -279,9 +281,14 @@ mod test {
             })
             .collect();
         let another_message: Vec<u8> = b"This is another message".iter().cloned().collect();
-        let signature_1 =
-            MLSAG::sign::<Blake2b, OsRng>(ks.clone(), another_ring.clone(), &another_message);
-        let signature_2 = MLSAG::sign::<Blake2b, OsRng>(ks.clone(), ring.clone(), &message);
+        let signature_1 = MLSAG::sign::<Blake2b, OsRng>(
+            ks.clone(),
+            another_ring.clone(),
+            secret_index,
+            &another_message,
+        );
+        let signature_2 =
+            MLSAG::sign::<Blake2b, OsRng>(ks.clone(), ring.clone(), secret_index, &message);
         let result = MLSAG::link(signature_1, signature_2);
         assert!(result);
     }

@@ -83,6 +83,7 @@ impl Sign<(Scalar, RistrettoPoint, Scalar), Vec<(RistrettoPoint, RistrettoPoint,
     >(
         k: (Scalar, RistrettoPoint, Scalar),
         mut ring: Vec<(RistrettoPoint, RistrettoPoint, Scalar)>,
+        secret_index: usize,
         message: &Vec<u8>,
     ) -> DLSAG {
         let mut csprng = CSPRNG::default();
@@ -95,9 +96,6 @@ impl Sign<(Scalar, RistrettoPoint, Scalar), Vec<(RistrettoPoint, RistrettoPoint,
 
         // Ring size (at least 4 but maximum 32)
         let n = ring.len() + 1;
-
-        // This is the index where the prover hides key
-        let secret_index = (csprng.next_u32() % n as u32) as usize;
 
         ring.insert(secret_index, k_point);
 
@@ -191,6 +189,7 @@ impl Sign<(RistrettoPoint, Scalar, Scalar), Vec<(RistrettoPoint, RistrettoPoint,
     >(
         k: (RistrettoPoint, Scalar, Scalar),
         mut ring: Vec<(RistrettoPoint, RistrettoPoint, Scalar)>,
+        secret_index: usize,
         message: &Vec<u8>,
     ) -> DLSAG {
         let mut csprng = CSPRNG::default();
@@ -203,9 +202,6 @@ impl Sign<(RistrettoPoint, Scalar, Scalar), Vec<(RistrettoPoint, RistrettoPoint,
 
         // Ring size (at least 4 but maximum 32)
         let n = ring.len() + 1;
-
-        // This is the index where the prover hides key
-        let secret_index = (csprng.next_u32() % n as u32) as usize;
 
         ring.insert(secret_index, k_point);
 
@@ -368,6 +364,7 @@ mod test {
         );
 
         let other_k: (RistrettoPoint, Scalar, Scalar) = (k.1, k.0, k.2);
+        let secret_index = 1;
         let n = 2;
         // Simulate randomly chosen Public keys (Prover will insert her public key here later)
         let ring: Vec<(RistrettoPoint, RistrettoPoint, Scalar)> = (0..(n - 1)) // Prover is going to add her key into this mix
@@ -382,38 +379,42 @@ mod test {
         let message: Vec<u8> = b"This is the message".iter().cloned().collect();
 
         {
-            let signature = DLSAG::sign::<Sha512, OsRng>(k, ring.clone(), &message);
+            let signature = DLSAG::sign::<Sha512, OsRng>(k, ring.clone(), secret_index, &message);
             let result = DLSAG::verify::<Sha512>(signature, &message);
             assert!(result);
         }
 
         {
-            let signature = DLSAG::sign::<Keccak512, OsRng>(k, ring.clone(), &message);
+            let signature =
+                DLSAG::sign::<Keccak512, OsRng>(k, ring.clone(), secret_index, &message);
             let result = DLSAG::verify::<Keccak512>(signature, &message);
             assert!(result);
         }
 
         {
-            let signature = DLSAG::sign::<Blake2b, OsRng>(k, ring.clone(), &message);
+            let signature = DLSAG::sign::<Blake2b, OsRng>(k, ring.clone(), secret_index, &message);
             let result = DLSAG::verify::<Blake2b>(signature, &message);
             assert!(result);
         }
 
         // Tests for signatures using the other end of the channel
         {
-            let signature = DLSAG::sign::<Sha512, OsRng>(other_k, ring.clone(), &message);
+            let signature =
+                DLSAG::sign::<Sha512, OsRng>(other_k, ring.clone(), secret_index, &message);
             let result = DLSAG::verify::<Sha512>(signature, &message);
             assert!(result);
         }
 
         {
-            let signature = DLSAG::sign::<Keccak512, OsRng>(other_k, ring.clone(), &message);
+            let signature =
+                DLSAG::sign::<Keccak512, OsRng>(other_k, ring.clone(), secret_index, &message);
             let result = DLSAG::verify::<Keccak512>(signature, &message);
             assert!(result);
         }
 
         {
-            let signature = DLSAG::sign::<Blake2b, OsRng>(other_k, ring.clone(), &message);
+            let signature =
+                DLSAG::sign::<Blake2b, OsRng>(other_k, ring.clone(), secret_index, &message);
             let result = DLSAG::verify::<Blake2b>(signature, &message);
             assert!(result);
         }
@@ -428,9 +429,11 @@ mod test {
             })
             .collect();
         let another_message: Vec<u8> = b"This is another message".iter().cloned().collect();
-        let signature_1 = DLSAG::sign::<Blake2b, OsRng>(k, another_ring.clone(), &another_message);
-        let signature_2 = DLSAG::sign::<Blake2b, OsRng>(k, ring.clone(), &message);
-        let signature_3 = DLSAG::sign::<Blake2b, OsRng>(other_k, ring.clone(), &message);
+        let signature_1 =
+            DLSAG::sign::<Blake2b, OsRng>(k, another_ring.clone(), secret_index, &another_message);
+        let signature_2 = DLSAG::sign::<Blake2b, OsRng>(k, ring.clone(), secret_index, &message);
+        let signature_3 =
+            DLSAG::sign::<Blake2b, OsRng>(other_k, ring.clone(), secret_index, &message);
         let result_1 = DLSAG::link(signature_1.clone(), signature_2);
         assert!(result_1);
         let result_2 = DLSAG::link(signature_1.clone(), signature_3);
