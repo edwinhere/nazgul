@@ -1,4 +1,4 @@
-use crate::traits::{Link, Sign, Verify};
+use crate::traits::{KeyImageGen, Link, Sign, Verify};
 use alloc::vec::Vec;
 use curve25519_dalek::constants;
 use curve25519_dalek::ristretto::RistrettoPoint;
@@ -28,6 +28,29 @@ pub struct CLSAG {
     key_images: Vec<RistrettoPoint>,
 }
 
+impl KeyImageGen<Vec<Scalar>, Vec<RistrettoPoint>> for CLSAG {
+    /// Some signature schemes require the key images to be signed as well.
+    /// Use this method to generate them
+    fn generate_key_image<Hash: Digest<OutputSize = U64> + Clone + Default>(
+        ks: Vec<Scalar>,
+    ) -> Vec<RistrettoPoint> {
+        let k_points: Vec<RistrettoPoint> = ks
+            .iter()
+            .map(|k| k * constants::RISTRETTO_BASEPOINT_POINT)
+            .collect();
+
+        // This is the base key
+        // i.e. the first public key for which the prover has the private key
+        let base_key_hashed_to_point: RistrettoPoint =
+            RistrettoPoint::from_hash(Hash::default().chain(k_points[0].compress().as_bytes()));
+
+        let key_images: Vec<RistrettoPoint> =
+            ks.iter().map(|k| k * base_key_hashed_to_point).collect();
+
+        return key_images;
+    }
+}
+
 impl Sign<Vec<Scalar>, Vec<Vec<RistrettoPoint>>> for CLSAG {
     /// To sign you need `ks` which is the set of private keys you want to sign with. Only the
     /// first one is linkable. The `ring` contains public keys for everybody except you. Your
@@ -42,9 +65,7 @@ impl Sign<Vec<Scalar>, Vec<Vec<RistrettoPoint>>> for CLSAG {
     ) -> CLSAG {
         let mut csprng = CSPRNG::default();
 
-        // Row count of matrix (minimum 4 maximum 32)
         let nr = ring.len() + 1;
-        // Column count of matrix (minimum 4 maximum 32)
         let nc = ring[0].len();
 
         //Provers public keys
@@ -58,8 +79,7 @@ impl Sign<Vec<Scalar>, Vec<Vec<RistrettoPoint>>> for CLSAG {
         let base_key_hashed_to_point: RistrettoPoint =
             RistrettoPoint::from_hash(Hash::default().chain(k_points[0].compress().as_bytes()));
 
-        let key_images: Vec<RistrettoPoint> =
-            ks.iter().map(|k| k * base_key_hashed_to_point).collect();
+        let key_images: Vec<RistrettoPoint> = CLSAG::generate_key_image::<Hash>(ks.clone());
 
         // This is the index where we hide our keys
         let secret_index = (csprng.next_u32() % nr as u32) as usize;
@@ -192,10 +212,9 @@ impl Verify for CLSAG {
         signature: CLSAG,
         message: &Vec<u8>,
     ) -> bool {
-        // Row count of matrix (minimum 4 maximum 32)
         let nr = signature.ring.len();
-        // Column count of matrix (minimum 4 maximum 32)
         let nc = signature.ring[0].len();
+
         let mut reconstructed_c: Scalar = signature.challenge;
         // Domain separated hashes as required by CSLAG paper
         // The hash functions have a label, and the ring members fed into it
@@ -298,10 +317,9 @@ mod test {
     #[test]
     fn clsag() {
         let mut csprng = OsRng::default();
-        // Row count of matrix (minimum 4 maximum 32)
-        let nr = (OsRng.next_u32() % 29 + 4) as usize;
-        // Column count of matrix (minimum 4 maximum 32)
-        let nc = (OsRng.next_u32() % 29 + 4) as usize;
+
+        let nr = 2;
+        let nc = 2;
 
         let ks: Vec<Scalar> = (0..nc).map(|_| Scalar::random(&mut csprng)).collect();
 

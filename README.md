@@ -20,4 +20,4 @@ This library is `#![no_std]` by default so it is possible to compile this librar
 
 # Documentation
 
-It is [here](https://docs.rs/nazgul/0.1.0/nazgul/)
+It is [here](https://docs.rs/nazgul/latest/nazgul/)

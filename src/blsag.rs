@@ -1,4 +1,4 @@
-use crate::traits::{Link, Sign, Verify};
+use crate::traits::{KeyImageGen, Link, Sign, Verify};
 use alloc::vec::Vec;
 use curve25519_dalek::constants;
 use curve25519_dalek::ristretto::RistrettoPoint;
@@ -20,6 +20,21 @@ pub struct BLSAG {
     key_image: RistrettoPoint,
 }
 
+impl KeyImageGen<Scalar, RistrettoPoint> for BLSAG {
+    /// Some signature schemes require the key images to be signed as well.
+    /// Use this method to generate them
+    fn generate_key_image<Hash: Digest<OutputSize = U64> + Clone + Default>(
+        k: Scalar,
+    ) -> RistrettoPoint {
+        let k_point: RistrettoPoint = k * constants::RISTRETTO_BASEPOINT_POINT;
+
+        let key_image: RistrettoPoint =
+            k * RistrettoPoint::from_hash(Hash::default().chain(k_point.compress().as_bytes()));
+
+        return key_image;
+    }
+}
+
 impl Sign<Scalar, Vec<RistrettoPoint>> for BLSAG {
     /// To sign you need `k` your private key, and `ring` which is the public keys of everyone
     /// except you. You are signing the `message`
@@ -36,8 +51,7 @@ impl Sign<Scalar, Vec<RistrettoPoint>> for BLSAG {
         // Provers public key
         let k_point: RistrettoPoint = k * constants::RISTRETTO_BASEPOINT_POINT;
 
-        let key_image: RistrettoPoint =
-            k * RistrettoPoint::from_hash(Hash::default().chain(k_point.compress().as_bytes()));
+        let key_image: RistrettoPoint = BLSAG::generate_key_image::<Hash>(k);
 
         let n = ring.len() + 1;
 
@@ -170,7 +184,7 @@ mod test {
     fn blsag() {
         let mut csprng = OsRng::default();
         let k: Scalar = Scalar::random(&mut csprng);
-        let n = (csprng.next_u32() % 29 + 4) as usize;
+        let n = 2;
         let ring: Vec<RistrettoPoint> = (0..(n - 1)) // Prover is going to add our key into this mix
             .map(|_| RistrettoPoint::random(&mut csprng))
             .collect();

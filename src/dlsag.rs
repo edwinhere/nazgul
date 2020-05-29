@@ -1,4 +1,4 @@
-use crate::traits::{Link, Sign, Verify};
+use crate::traits::{KeyImageGen, Link, Sign, Verify};
 use alloc::vec::Vec;
 use curve25519_dalek::constants;
 use curve25519_dalek::ristretto::RistrettoPoint;
@@ -26,6 +26,40 @@ pub struct DLSAG {
     ring: Vec<(RistrettoPoint, RistrettoPoint, Scalar)>,
     key_image: RistrettoPoint,
     b: bool,
+}
+
+impl KeyImageGen<(Scalar, RistrettoPoint, Scalar), RistrettoPoint> for DLSAG {
+    /// Some signature schemes require the key images to be signed as well.
+    /// Use this method to generate them
+    fn generate_key_image<Hash: Digest<OutputSize = U64> + Clone + Default>(
+        k: (Scalar, RistrettoPoint, Scalar),
+    ) -> RistrettoPoint {
+        let k_point: (RistrettoPoint, RistrettoPoint, Scalar) =
+            (k.0 * constants::RISTRETTO_BASEPOINT_POINT, k.1, k.2);
+
+        let key_image: RistrettoPoint = k.2
+            * k.0
+            * RistrettoPoint::from_hash(Hash::default().chain(k_point.1.compress().as_bytes()));
+
+        return key_image;
+    }
+}
+
+impl KeyImageGen<(RistrettoPoint, Scalar, Scalar), RistrettoPoint> for DLSAG {
+    /// Some signature schemes require the key images to be signed as well.
+    /// Use this method to generate them
+    fn generate_key_image<Hash: Digest<OutputSize = U64> + Clone + Default>(
+        k: (RistrettoPoint, Scalar, Scalar),
+    ) -> RistrettoPoint {
+        let k_point: (RistrettoPoint, RistrettoPoint, Scalar) =
+            (k.0, k.1 * constants::RISTRETTO_BASEPOINT_POINT, k.2);
+
+        let key_image: RistrettoPoint = k.2
+            * k.1
+            * RistrettoPoint::from_hash(Hash::default().chain(k_point.0.compress().as_bytes()));
+
+        return key_image;
+    }
 }
 
 impl Sign<(Scalar, RistrettoPoint, Scalar), Vec<(RistrettoPoint, RistrettoPoint, Scalar)>>
@@ -57,9 +91,7 @@ impl Sign<(Scalar, RistrettoPoint, Scalar), Vec<(RistrettoPoint, RistrettoPoint,
         let k_point: (RistrettoPoint, RistrettoPoint, Scalar) =
             (k.0 * constants::RISTRETTO_BASEPOINT_POINT, k.1, k.2);
 
-        let key_image: RistrettoPoint = k.2
-            * k.0
-            * RistrettoPoint::from_hash(Hash::default().chain(k_point.1.compress().as_bytes()));
+        let key_image: RistrettoPoint = DLSAG::generate_key_image::<Hash>(k);
 
         // Ring size (at least 4 but maximum 32)
         let n = ring.len() + 1;
@@ -167,9 +199,7 @@ impl Sign<(RistrettoPoint, Scalar, Scalar), Vec<(RistrettoPoint, RistrettoPoint,
         let k_point: (RistrettoPoint, RistrettoPoint, Scalar) =
             (k.0, k.1 * constants::RISTRETTO_BASEPOINT_POINT, k.2);
 
-        let key_image: RistrettoPoint = k.2
-            * k.1
-            * RistrettoPoint::from_hash(Hash::default().chain(k_point.0.compress().as_bytes()));
+        let key_image: RistrettoPoint = DLSAG::generate_key_image::<Hash>(k);
 
         // Ring size (at least 4 but maximum 32)
         let n = ring.len() + 1;
@@ -338,7 +368,7 @@ mod test {
         );
 
         let other_k: (RistrettoPoint, Scalar, Scalar) = (k.1, k.0, k.2);
-        let n = (csprng.next_u32() % 29 + 4) as usize;
+        let n = 2;
         // Simulate randomly chosen Public keys (Prover will insert her public key here later)
         let ring: Vec<(RistrettoPoint, RistrettoPoint, Scalar)> = (0..(n - 1)) // Prover is going to add her key into this mix
             .map(|_| {

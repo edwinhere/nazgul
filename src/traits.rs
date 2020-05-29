@@ -24,3 +24,9 @@ pub trait Verify {
 pub trait Link {
     fn link(signature_1: Self, signature_2: Self) -> bool;
 }
+
+pub trait KeyImageGen<PrivateKey, KeyImages> {
+    fn generate_key_image<Hash: Digest<OutputSize = U64> + Clone + Default>(
+        k: PrivateKey,
+    ) -> KeyImages;
+}

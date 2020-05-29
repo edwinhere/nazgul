@@ -115,7 +115,7 @@ mod test {
     fn sag() {
         let mut csprng = OsRng::default();
         let k: Scalar = Scalar::random(&mut csprng);
-        let n = (csprng.next_u32() % 29 + 4) as usize;
+        let n = 2;
         let ring: Vec<RistrettoPoint> = (0..(n - 1)) // Prover is going to add our key into this mix
             .map(|_| RistrettoPoint::random(&mut csprng))
             .collect();

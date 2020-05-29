@@ -1,4 +1,4 @@
-use crate::traits::{Link, Sign, Verify};
+use crate::traits::{KeyImageGen, Link, Sign, Verify};
 use alloc::vec::Vec;
 use curve25519_dalek::constants;
 use curve25519_dalek::ristretto::RistrettoPoint;
@@ -26,6 +26,60 @@ pub struct MDLSAG {
     ring: Vec<Vec<(RistrettoPoint, RistrettoPoint, Scalar)>>,
     key_images: Vec<RistrettoPoint>,
     b: bool,
+}
+
+impl KeyImageGen<Vec<(Scalar, RistrettoPoint, Scalar)>, Vec<RistrettoPoint>> for MDLSAG {
+    /// Some signature schemes require the key images to be signed as well.
+    /// Use this method to generate them
+    fn generate_key_image<Hash: Digest<OutputSize = U64> + Clone + Default>(
+        ks: Vec<(Scalar, RistrettoPoint, Scalar)>,
+    ) -> Vec<RistrettoPoint> {
+        let nc = ks.len();
+
+        let k_points: Vec<(RistrettoPoint, RistrettoPoint, Scalar)> = ks
+            .iter()
+            .map(|k| (k.0 * constants::RISTRETTO_BASEPOINT_POINT, k.1, k.2))
+            .collect();
+
+        let key_images: Vec<RistrettoPoint> = (0..nc)
+            .map(|j| {
+                ks[j].2
+                    * ks[j].0
+                    * RistrettoPoint::from_hash(
+                        Hash::default().chain(k_points[j].1.compress().as_bytes()),
+                    )
+            })
+            .collect();
+
+        return key_images;
+    }
+}
+
+impl KeyImageGen<Vec<(RistrettoPoint, Scalar, Scalar)>, Vec<RistrettoPoint>> for MDLSAG {
+    /// Some signature schemes require the key images to be signed as well.
+    /// Use this method to generate them
+    fn generate_key_image<Hash: Digest<OutputSize = U64> + Clone + Default>(
+        ks: Vec<(RistrettoPoint, Scalar, Scalar)>,
+    ) -> Vec<RistrettoPoint> {
+        let nc = ks.len();
+
+        let k_points: Vec<(RistrettoPoint, RistrettoPoint, Scalar)> = ks
+            .iter()
+            .map(|k| (k.0, k.1 * constants::RISTRETTO_BASEPOINT_POINT, k.2))
+            .collect();
+
+        let key_images: Vec<RistrettoPoint> = (0..nc)
+            .map(|j| {
+                ks[j].2
+                    * ks[j].1
+                    * RistrettoPoint::from_hash(
+                        Hash::default().chain(k_points[j].0.compress().as_bytes()),
+                    )
+            })
+            .collect();
+
+        return key_images;
+    }
 }
 
 impl Sign<Vec<(Scalar, RistrettoPoint, Scalar)>, Vec<Vec<(RistrettoPoint, RistrettoPoint, Scalar)>>>
@@ -61,15 +115,7 @@ impl Sign<Vec<(Scalar, RistrettoPoint, Scalar)>, Vec<Vec<(RistrettoPoint, Ristre
             .map(|k| (k.0 * constants::RISTRETTO_BASEPOINT_POINT, k.1, k.2))
             .collect();
 
-        let key_images: Vec<RistrettoPoint> = (0..nc)
-            .map(|j| {
-                ks[j].2
-                    * ks[j].0
-                    * RistrettoPoint::from_hash(
-                        Hash::default().chain(k_points[j].1.compress().as_bytes()),
-                    )
-            })
-            .collect();
+        let key_images: Vec<RistrettoPoint> = MDLSAG::generate_key_image::<Hash>(ks.clone());
 
         // This is the index where we hide our keys
         let secret_index = (csprng.next_u32() % nr as u32) as usize;
@@ -188,15 +234,7 @@ impl Sign<Vec<(RistrettoPoint, Scalar, Scalar)>, Vec<Vec<(RistrettoPoint, Ristre
             .map(|k| (k.0, k.1 * constants::RISTRETTO_BASEPOINT_POINT, k.2))
             .collect();
 
-        let key_images: Vec<RistrettoPoint> = (0..nc)
-            .map(|j| {
-                ks[j].2
-                    * ks[j].1
-                    * RistrettoPoint::from_hash(
-                        Hash::default().chain(k_points[j].0.compress().as_bytes()),
-                    )
-            })
-            .collect();
+        let key_images: Vec<RistrettoPoint> = MDLSAG::generate_key_image::<Hash>(ks.clone());
 
         // This is the index where we hide our keys
         let secret_index = (csprng.next_u32() % nr as u32) as usize;
@@ -386,10 +424,9 @@ mod test {
     #[test]
     fn mdlsag() {
         let mut csprng = OsRng::default();
-        // Row count of matrix (minimum 4 maximum 32)
-        let nr = (OsRng.next_u32() % 29 + 4) as usize;
-        // Column count of matrix (minimum 4 maximum 32)
-        let nc = (OsRng.next_u32() % 29 + 4) as usize;
+
+        let nr = 2;
+        let nc = 2;
 
         let ks: Vec<(Scalar, RistrettoPoint, Scalar)> = (0..nc)
             .map(|_| {
