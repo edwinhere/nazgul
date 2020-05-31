@@ -1,5 +1,6 @@
 [hooks]
-pre-commit = "cargo test && gbump -t minor"
+pre-commit = "cargo test && cargo bump minor"
+post-push = "cargo package && cargo publish"
 
 [logging]
 verbose = true
