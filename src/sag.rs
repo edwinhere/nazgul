@@ -13,9 +13,9 @@ use rand_core::{CryptoRng, RngCore};
 /// Please read tests at the bottom of the source code for this module for examples on how to use
 /// it
 pub struct SAG {
-    challenge: Scalar,
-    responses: Vec<Scalar>,
-    ring: Vec<RistrettoPoint>,
+    pub challenge: Scalar,
+    pub responses: Vec<Scalar>,
+    pub ring: Vec<RistrettoPoint>,
 }
 
 impl Sign<Scalar, Vec<RistrettoPoint>> for SAG {

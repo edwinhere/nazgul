@@ -17,15 +17,15 @@ use rand_core::{CryptoRng, RngCore};
 /// it
 pub struct CLSAG {
     /// This is the challenge generated non-interactievely
-    challenge: Scalar,
+    pub challenge: Scalar,
     /// These responses are mostly fake, except one which is real.
-    responses: Vec<Scalar>,
+    pub responses: Vec<Scalar>,
     /// These are public keys most of which does not belong to the signer, except one which is the
     /// signer.
-    ring: Vec<Vec<RistrettoPoint>>,
+    pub ring: Vec<Vec<RistrettoPoint>>,
     /// These are key images. Only the first one is linkable. If the keypair corresponding to the
     /// first key-image is ever used everyone will know.
-    key_images: Vec<RistrettoPoint>,
+    pub key_images: Vec<RistrettoPoint>,
 }
 
 impl KeyImageGen<Vec<Scalar>, Vec<RistrettoPoint>> for CLSAG {

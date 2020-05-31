@@ -21,11 +21,11 @@ use rand_core::{CryptoRng, RngCore};
 
 #[derive(Clone)]
 pub struct DLSAG {
-    challenge: Scalar,
-    responses: Vec<Scalar>,
-    ring: Vec<(RistrettoPoint, RistrettoPoint, Scalar)>,
-    key_image: RistrettoPoint,
-    b: bool,
+    pub challenge: Scalar,
+    pub responses: Vec<Scalar>,
+    pub ring: Vec<(RistrettoPoint, RistrettoPoint, Scalar)>,
+    pub key_image: RistrettoPoint,
+    pub b: bool,
 }
 
 impl KeyImageGen<(Scalar, RistrettoPoint, Scalar), RistrettoPoint> for DLSAG {

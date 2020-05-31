@@ -16,10 +16,10 @@ use rand_core::{CryptoRng, RngCore};
 /// Please read tests at the bottom of the source code for this module for examples on how to use
 /// it
 pub struct MLSAG {
-    challenge: Scalar,
-    responses: Vec<Vec<Scalar>>,
-    ring: Vec<Vec<RistrettoPoint>>,
-    key_images: Vec<RistrettoPoint>,
+    pub challenge: Scalar,
+    pub responses: Vec<Vec<Scalar>>,
+    pub ring: Vec<Vec<RistrettoPoint>>,
+    pub key_images: Vec<RistrettoPoint>,
 }
 
 impl KeyImageGen<Vec<Scalar>, Vec<RistrettoPoint>> for MLSAG {
