@@ -1,5 +1,5 @@
 [hooks]
-pre-applypatch = "cargo test && cargo bump patch && echo"
+pre-commit = "cargo test && cargo bump patch && git add Cargo.toml"
 pre-push = "cargo package && cargo publish && echo"
 
 [logging]
