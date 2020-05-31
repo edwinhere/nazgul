@@ -1,6 +1,6 @@
 [hooks]
-pre-commit = "cargo test && cargo bump patch"
-pre-push = "cargo package && cargo publish"
+pre-applypatch = "cargo test && cargo bump patch && echo"
+pre-push = "cargo package && cargo publish && echo"
 
 [logging]
 verbose = true
