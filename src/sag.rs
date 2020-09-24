@@ -36,11 +36,11 @@ impl Sign<Scalar, Vec<RistrettoPoint>> for SAG {
         let mut cs: Vec<Scalar> = (0..n).map(|_| Scalar::zero()).collect();
         let mut group_and_message_hash = Hash::new();
         for k_point in &ring {
-            group_and_message_hash.input(k_point.compress().as_bytes());
+            group_and_message_hash.update(k_point.compress().as_bytes());
         }
-        group_and_message_hash.input(message);
+        group_and_message_hash.update(message);
         let mut hashes: Vec<Hash> = (0..n).map(|_| group_and_message_hash.clone()).collect();
-        hashes[(secret_index + 1) % n].input(
+        hashes[(secret_index + 1) % n].update(
             (a * constants::RISTRETTO_BASEPOINT_POINT)
                 .compress()
                 .as_bytes(),
@@ -48,7 +48,7 @@ impl Sign<Scalar, Vec<RistrettoPoint>> for SAG {
         cs[(secret_index + 1) % n] = Scalar::from_hash(hashes[(secret_index + 1) % n].clone());
         let mut i = (secret_index + 1) % n;
         loop {
-            hashes[(i + 1) % n].input(
+            hashes[(i + 1) % n].update(
                 ((rs[i % n] * constants::RISTRETTO_BASEPOINT_POINT) + (cs[i % n] * ring[i % n]))
                     .compress()
                     .as_bytes(),
@@ -78,12 +78,12 @@ impl Verify for SAG {
         let mut reconstructed_c: Scalar = signature.challenge;
         let mut group_and_message_hash = Hash::new();
         for k_point in &signature.ring {
-            group_and_message_hash.input(k_point.compress().as_bytes());
+            group_and_message_hash.update(k_point.compress().as_bytes());
         }
-        group_and_message_hash.input(message);
+        group_and_message_hash.update(message);
         for j in 0..n {
             let mut h: Hash = group_and_message_hash.clone();
-            h.input(
+            h.update(
                 ((signature.responses[j] * constants::RISTRETTO_BASEPOINT_POINT)
                     + (reconstructed_c * signature.ring[j]))
                     .compress()

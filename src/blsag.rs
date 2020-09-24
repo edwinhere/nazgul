@@ -67,16 +67,16 @@ impl Sign<Scalar, Vec<RistrettoPoint>> for BLSAG {
         // Hash of message is shared by all challenges H_n(m, ....)
         let mut message_hash = Hash::default();
 
-        message_hash.input(message);
+        message_hash.update(message);
 
         let mut hashes: Vec<Hash> = (0..n).map(|_| message_hash.clone()).collect();
 
-        hashes[(secret_index + 1) % n].input(
+        hashes[(secret_index + 1) % n].update(
             (a * constants::RISTRETTO_BASEPOINT_POINT)
                 .compress()
                 .as_bytes(),
         );
-        hashes[(secret_index + 1) % n].input(
+        hashes[(secret_index + 1) % n].update(
             (a * RistrettoPoint::from_hash(Hash::default().chain(k_point.compress().as_bytes())))
                 .compress()
                 .as_bytes(),
@@ -86,12 +86,12 @@ impl Sign<Scalar, Vec<RistrettoPoint>> for BLSAG {
         let mut i = (secret_index + 1) % n;
 
         loop {
-            hashes[(i + 1) % n].input(
+            hashes[(i + 1) % n].update(
                 ((rs[i % n] * constants::RISTRETTO_BASEPOINT_POINT) + (cs[i % n] * ring[i % n]))
                     .compress()
                     .as_bytes(),
             );
-            hashes[(i + 1) % n].input(
+            hashes[(i + 1) % n].update(
                 ((rs[i % n]
                     * RistrettoPoint::from_hash(
                         Hash::default().chain(ring[i % n].compress().as_bytes()),
@@ -132,15 +132,15 @@ impl Verify for BLSAG {
         let n = signature.ring.len();
         for j in 0..n {
             let mut h: Hash = Hash::default();
-            h.input(message);
-            h.input(
+            h.update(message);
+            h.update(
                 ((signature.responses[j] * constants::RISTRETTO_BASEPOINT_POINT)
                     + (reconstructed_c * signature.ring[j]))
                     .compress()
                     .as_bytes(),
             );
 
-            h.input(
+            h.update(
                 (signature.responses[j]
                     * RistrettoPoint::from_hash(
                         Hash::default().chain(signature.ring[j].compress().as_bytes()),

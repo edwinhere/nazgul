@@ -89,17 +89,17 @@ impl Sign<Vec<Scalar>, Vec<Vec<RistrettoPoint>>> for MLSAG {
         // Hash of message is shared by all challenges H_n(m, ....)
         let mut message_hash = Hash::default();
 
-        message_hash.input(message);
+        message_hash.update(message);
 
         let mut hashes: Vec<Hash> = (0..nr).map(|_| message_hash.clone()).collect();
 
         for j in 0..nc {
-            hashes[(secret_index + 1) % nr].input(
+            hashes[(secret_index + 1) % nr].update(
                 (a[j] * constants::RISTRETTO_BASEPOINT_POINT)
                     .compress()
                     .as_bytes(),
             );
-            hashes[(secret_index + 1) % nr].input(
+            hashes[(secret_index + 1) % nr].update(
                 (a[j]
                     * RistrettoPoint::from_hash(
                         Hash::default().chain(k_points[j].compress().as_bytes()),
@@ -114,13 +114,13 @@ impl Sign<Vec<Scalar>, Vec<Vec<RistrettoPoint>>> for MLSAG {
 
         loop {
             for j in 0..nc {
-                hashes[(i + 1) % nr].input(
+                hashes[(i + 1) % nr].update(
                     ((rs[i % nr][j] * constants::RISTRETTO_BASEPOINT_POINT)
                         + (cs[i % nr] * ring[i % nr][j]))
                         .compress()
                         .as_bytes(),
                 );
-                hashes[(i + 1) % nr].input(
+                hashes[(i + 1) % nr].update(
                     ((rs[i % nr][j]
                         * RistrettoPoint::from_hash(
                             Hash::default().chain(ring[i % nr][j].compress().as_bytes()),
@@ -167,17 +167,17 @@ impl Verify for MLSAG {
         let nc = signature.ring[0].len();
         for _i in 0..nr {
             let mut h: Hash = Hash::default();
-            h.input(message);
+            h.update(message);
 
             for j in 0..nc {
-                h.input(
+                h.update(
                     ((signature.responses[_i][j] * constants::RISTRETTO_BASEPOINT_POINT)
                         + (reconstructed_c * signature.ring[_i][j]))
                         .compress()
                         .as_bytes(),
                 );
 
-                h.input(
+                h.update(
                     (signature.responses[_i][j]
                         * RistrettoPoint::from_hash(
                             Hash::default().chain(signature.ring[_i][j].compress().as_bytes()),

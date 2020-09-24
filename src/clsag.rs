@@ -95,10 +95,10 @@ impl Sign<Vec<Scalar>, Vec<Vec<RistrettoPoint>>> for CLSAG {
         let prefixed_hashes: Vec<Hash> = (0..nc)
             .map(|index| {
                 let mut h: Hash = Hash::default();
-                h.input(format!("CSLAG_{}", index));
+                h.update(format!("CSLAG_{}", index));
                 for i in 0..nr {
                     for j in 0..nc {
-                        h.input(ring[i][j].compress().as_bytes());
+                        h.update(ring[i][j].compress().as_bytes());
                     }
                 }
                 return h;
@@ -111,7 +111,7 @@ impl Sign<Vec<Scalar>, Vec<Vec<RistrettoPoint>>> for CLSAG {
             .map(|index| {
                 let mut h: Hash = prefixed_hashes[index].clone();
                 for j in 0..nc {
-                    h.input(key_images[j].compress().as_bytes());
+                    h.update(key_images[j].compress().as_bytes());
                 }
                 return h;
             })
@@ -145,35 +145,35 @@ impl Sign<Vec<Scalar>, Vec<Vec<RistrettoPoint>>> for CLSAG {
         let mut hashes: Vec<Hash> = (0..nr)
             .map(|_| {
                 let mut h: Hash = Hash::default();
-                h.input(format!("CSLAG_c"));
+                h.update(format!("CSLAG_c"));
                 for i in 0..nr {
                     for j in 0..nc {
-                        h.input(ring[i][j].compress().as_bytes());
+                        h.update(ring[i][j].compress().as_bytes());
                     }
                 }
-                h.input(message);
+                h.update(message);
                 return h;
             })
             .collect();
 
-        hashes[(secret_index + 1) % nr].input(
+        hashes[(secret_index + 1) % nr].update(
             (a * constants::RISTRETTO_BASEPOINT_POINT)
                 .compress()
                 .as_bytes(),
         );
-        hashes[(secret_index + 1) % nr].input((a * base_key_hashed_to_point).compress().as_bytes());
+        hashes[(secret_index + 1) % nr].update((a * base_key_hashed_to_point).compress().as_bytes());
         cs[(secret_index + 1) % nr] = Scalar::from_hash(hashes[(secret_index + 1) % nr].clone());
 
         let mut i = (secret_index + 1) % nr;
 
         loop {
-            hashes[(i + 1) % nr].input(
+            hashes[(i + 1) % nr].update(
                 ((rs[i % nr] * constants::RISTRETTO_BASEPOINT_POINT)
                     + (cs[i % nr] * aggregate_public_keys[i % nr]))
                     .compress()
                     .as_bytes(),
             );
-            hashes[(i + 1) % nr].input(
+            hashes[(i + 1) % nr].update(
                 ((rs[i % nr]
                     * RistrettoPoint::from_hash(
                         Hash::default().chain(ring[i % nr][0].compress().as_bytes()),
@@ -219,10 +219,10 @@ impl Verify for CLSAG {
         let prefixed_hashes: Vec<Hash> = (0..nc)
             .map(|index| {
                 let mut h: Hash = Hash::default();
-                h.input(format!("CSLAG_{}", index));
+                h.update(format!("CSLAG_{}", index));
                 for i in 0..nr {
                     for j in 0..nc {
-                        h.input(signature.ring[i][j].compress().as_bytes());
+                        h.update(signature.ring[i][j].compress().as_bytes());
                     }
                 }
                 return h;
@@ -235,7 +235,7 @@ impl Verify for CLSAG {
             .map(|index| {
                 let mut h: Hash = prefixed_hashes[index].clone();
                 for j in 0..nc {
-                    h.input(signature.key_images[j].compress().as_bytes());
+                    h.update(signature.key_images[j].compress().as_bytes());
                 }
                 return h;
             })
@@ -260,21 +260,21 @@ impl Verify for CLSAG {
             .sum();
         for _i in 0..nr {
             let mut h: Hash = Hash::default();
-            h.input(format!("CSLAG_c"));
+            h.update(format!("CSLAG_c"));
             for i in 0..nr {
                 for j in 0..nc {
-                    h.input(signature.ring[i][j].compress().as_bytes());
+                    h.update(signature.ring[i][j].compress().as_bytes());
                 }
             }
-            h.input(message);
-            h.input(
+            h.update(message);
+            h.update(
                 ((signature.responses[_i] * constants::RISTRETTO_BASEPOINT_POINT)
                     + (reconstructed_c * aggregate_public_keys[_i]))
                     .compress()
                     .as_bytes(),
             );
 
-            h.input(
+            h.update(
                 (signature.responses[_i]
                     * RistrettoPoint::from_hash(
                         Hash::new().chain(signature.ring[_i][0].compress().as_bytes()),
