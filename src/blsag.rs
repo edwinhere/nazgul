@@ -6,6 +6,7 @@ use curve25519_dalek::scalar::Scalar;
 use digest::generic_array::typenum::U64;
 use digest::Digest;
 use rand_core::{CryptoRng, RngCore};
+use curve25519_dalek::traits::MultiscalarMul;
 
 /// Back’s Linkable Spontaneous Anonymous Group (bLSAG) signatures
 /// > This an enhanced version of the LSAG algorithm where linkability
@@ -87,16 +88,23 @@ impl Sign<Scalar, Vec<RistrettoPoint>> for BLSAG {
 
         loop {
             hashes[(i + 1) % n].update(
-                ((rs[i % n] * constants::RISTRETTO_BASEPOINT_POINT) + (cs[i % n] * ring[i % n]))
+                RistrettoPoint::multiscalar_mul(
+                    &[rs[i % n], cs[i % n]],
+                    &[constants::RISTRETTO_BASEPOINT_POINT, ring[i % n]]
+                )
                     .compress()
                     .as_bytes(),
             );
             hashes[(i + 1) % n].update(
-                ((rs[i % n]
-                    * RistrettoPoint::from_hash(
-                        Hash::default().chain(ring[i % n].compress().as_bytes()),
-                    ))
-                    + (cs[i % n] * key_image))
+                RistrettoPoint::multiscalar_mul(
+                    &[rs[i % n], cs[i % n]],
+                    &[
+                        RistrettoPoint::from_hash(
+                            Hash::default()
+                                .chain(ring[i % n].compress().as_bytes())
+                        ),
+                        key_image
+                    ])
                     .compress()
                     .as_bytes(),
             );
@@ -134,18 +142,25 @@ impl Verify for BLSAG {
             let mut h: Hash = Hash::default();
             h.update(message);
             h.update(
-                ((signature.responses[j] * constants::RISTRETTO_BASEPOINT_POINT)
-                    + (reconstructed_c * signature.ring[j]))
+                RistrettoPoint::multiscalar_mul(
+                    &[signature.responses[j], reconstructed_c],
+                    &[constants::RISTRETTO_BASEPOINT_POINT, signature.ring[j]]
+                )
                     .compress()
                     .as_bytes(),
             );
 
             h.update(
-                (signature.responses[j]
-                    * RistrettoPoint::from_hash(
-                        Hash::default().chain(signature.ring[j].compress().as_bytes()),
-                    )
-                    + (reconstructed_c * signature.key_image))
+                RistrettoPoint::multiscalar_mul(
+                    &[signature.responses[j], reconstructed_c],
+                    &[RistrettoPoint::from_hash(
+                            Hash::default().chain(
+                                signature.ring[j].compress().as_bytes()
+                            ),
+                        ),
+                        signature.key_image
+                    ]
+                )
                     .compress()
                     .as_bytes(),
             );

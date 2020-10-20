@@ -1,11 +1,14 @@
-use crate::traits::{Sign, Verify};
 use alloc::vec::Vec;
+
 use curve25519_dalek::constants;
 use curve25519_dalek::ristretto::RistrettoPoint;
 use curve25519_dalek::scalar::Scalar;
-use digest::generic_array::typenum::U64;
+use curve25519_dalek::traits::MultiscalarMul;
 use digest::Digest;
+use digest::generic_array::typenum::U64;
 use rand_core::{CryptoRng, RngCore};
+
+use crate::traits::{Sign, Verify};
 
 /// Spontaneous Anonymous Group (SAG) signatures
 /// > This non-linkable ring signature that allows spontaneous groups, provided here for conceptual clarity
@@ -21,7 +24,7 @@ pub struct SAG {
 impl Sign<Scalar, Vec<RistrettoPoint>> for SAG {
     /// To sign you need `k` your private key, and `ring` which is the public keys of everyone
     /// except you. You are signing the `message`
-    fn sign<Hash: Digest<OutputSize = U64> + Clone, CSPRNG: CryptoRng + RngCore + Default>(
+    fn sign<Hash: Digest<OutputSize=U64> + Clone, CSPRNG: CryptoRng + RngCore + Default>(
         k: Scalar,
         mut ring: Vec<RistrettoPoint>,
         secret_index: usize,
@@ -49,7 +52,10 @@ impl Sign<Scalar, Vec<RistrettoPoint>> for SAG {
         let mut i = (secret_index + 1) % n;
         loop {
             hashes[(i + 1) % n].update(
-                ((rs[i % n] * constants::RISTRETTO_BASEPOINT_POINT) + (cs[i % n] * ring[i % n]))
+                RistrettoPoint::multiscalar_mul(
+                    &[rs[i % n], cs[i % n]],
+                    &[constants::RISTRETTO_BASEPOINT_POINT, ring[i % n]],
+                )
                     .compress()
                     .as_bytes(),
             );
@@ -73,7 +79,7 @@ impl Sign<Scalar, Vec<RistrettoPoint>> for SAG {
 
 impl Verify for SAG {
     /// To verify a `signature` you need the `message` too
-    fn verify<Hash: Digest<OutputSize = U64> + Clone>(signature: SAG, message: &Vec<u8>) -> bool {
+    fn verify<Hash: Digest<OutputSize=U64> + Clone>(signature: SAG, message: &Vec<u8>) -> bool {
         let n = signature.ring.len();
         let mut reconstructed_c: Scalar = signature.challenge;
         let mut group_and_message_hash = Hash::new();
@@ -84,8 +90,10 @@ impl Verify for SAG {
         for j in 0..n {
             let mut h: Hash = group_and_message_hash.clone();
             h.update(
-                ((signature.responses[j] * constants::RISTRETTO_BASEPOINT_POINT)
-                    + (reconstructed_c * signature.ring[j]))
+                RistrettoPoint::multiscalar_mul(
+                    &[signature.responses[j], reconstructed_c],
+                    &[constants::RISTRETTO_BASEPOINT_POINT, signature.ring[j]],
+                )
                     .compress()
                     .as_bytes(),
             );
@@ -103,13 +111,14 @@ mod test {
     extern crate sha2;
     extern crate sha3;
 
-    use super::*;
     use blake2::Blake2b;
     use curve25519_dalek::ristretto::RistrettoPoint;
     use curve25519_dalek::scalar::Scalar;
     use rand::rngs::OsRng;
     use sha2::Sha512;
     use sha3::Keccak512;
+
+    use super::*;
 
     #[test]
     fn sag() {
