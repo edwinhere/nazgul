@@ -321,6 +321,7 @@ impl Link for CLSAG {
 }
 
 #[cfg(test)]
+#[cfg(feature = "std")]
 mod test {
     extern crate blake2;
     extern crate rand;

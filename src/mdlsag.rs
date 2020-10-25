@@ -438,6 +438,7 @@ impl Link for MDLSAG {
 }
 
 #[cfg(test)]
+#[cfg(feature = "std")]
 mod test {
     extern crate blake2;
     extern crate rand;

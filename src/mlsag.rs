@@ -235,6 +235,7 @@ impl Link for MLSAG {
 }
 
 #[cfg(test)]
+#[cfg(feature = "std")]
 mod test {
     extern crate blake2;
     extern crate rand;
