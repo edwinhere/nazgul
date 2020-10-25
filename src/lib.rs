@@ -19,8 +19,15 @@
 //! This library is `#![no_std]` by default so it is possible to compile this library for embedded devices and WebAssembly but we haven't tried.
 
 #![no_std]
+
+#[cfg(all(feature = "alloc", not(feature = "std")))]
 #[macro_use]
 extern crate alloc;
+
+#[cfg(feature = "std")]
+#[macro_use]
+extern crate std;
+
 extern crate curve25519_dalek;
 extern crate digest;
 extern crate rand_core;
@@ -32,3 +39,4 @@ pub mod mdlsag;
 pub mod mlsag;
 pub mod sag;
 pub mod traits;
+pub(crate) mod prelude;

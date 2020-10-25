@@ -1,4 +1,4 @@
-use alloc::vec::Vec;
+use crate::prelude::*;
 use digest::generic_array::typenum::U64;
 use digest::Digest;
 use rand_core::{CryptoRng, RngCore};

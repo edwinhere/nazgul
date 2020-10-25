@@ -3,7 +3,7 @@ name = "nazgul"
 description = "A library that implements various ring signature schemes"
 readme = "README.md"
 license = "MIT"
-version = "0.1.8"
+version = "0.1.9"
 authors = ["Edwin Jose Palathinkal <edwinhere@gmail.com>"]
 edition = "2018"
 keywords = ["cryptography", "crypto", "ristretto", "ristretto255", "monero"]
@@ -13,12 +13,32 @@ repository = "https://github.com/edwinhere/nazgul"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-curve25519-dalek = "3"
-digest = "0.9.0"
-rand_core = "0.5.1"
+curve25519-dalek = { version = "3", default-features = false }
+digest = { version = "0.9.0", default-features = false }
+rand_core = { version = "0.5.1", default-features = false }
 
 [dev-dependencies]
 sha2 = "0.9.0"
 sha3 = "0.9.0"
 blake2 = "0.9.0"
 rand = "0.7.3"
+
+[features]
+default = ["std", "alloc", "u64_backend"]
+std = [
+    "curve25519-dalek/std",
+    "digest/std",
+    "rand_core/std"
+]
+alloc = [
+    "curve25519-dalek/alloc"
+]
+u64_backend = [
+    "curve25519-dalek/u64_backend"
+]
+u32_backend = [
+    "curve25519-dalek/u32_backend"
+]
+simd_backend = [
+    "curve25519-dalek/simd_backend"
+]
