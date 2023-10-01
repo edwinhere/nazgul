@@ -43,7 +43,7 @@ impl KeyImageGen<Vec<Scalar>, Vec<RistrettoPoint>> for CLSAG {
         // This is the base key
         // i.e. the first public key for which the prover has the private key
         let base_key_hashed_to_point: RistrettoPoint =
-            RistrettoPoint::from_hash(Hash::default().chain(k_points[0].compress().as_bytes()));
+            RistrettoPoint::from_hash(Hash::default().chain_update(k_points[0].compress().as_bytes()));
 
         let key_images: Vec<RistrettoPoint> =
             ks.iter().map(|k| k * base_key_hashed_to_point).collect();
@@ -79,7 +79,7 @@ impl Sign<Vec<Scalar>, Vec<Vec<RistrettoPoint>>> for CLSAG {
         // This is the base key
         // i.e. the first public key for which the prover has the private key
         let base_key_hashed_to_point: RistrettoPoint =
-            RistrettoPoint::from_hash(Hash::default().chain(k_points[0].compress().as_bytes()));
+            RistrettoPoint::from_hash(Hash::default().chain_update(k_points[0].compress().as_bytes()));
 
         let key_images: Vec<RistrettoPoint> = CLSAG::generate_key_image::<Hash>(ks.clone());
 
@@ -89,7 +89,7 @@ impl Sign<Vec<Scalar>, Vec<Vec<RistrettoPoint>>> for CLSAG {
 
         let mut rs: Vec<Scalar> = (0..nr).map(|_| Scalar::random(&mut csprng)).collect();
 
-        let mut cs: Vec<Scalar> = (0..nr).map(|_| Scalar::zero()).collect();
+        let mut cs: Vec<Scalar> = (0..nr).map(|_| Scalar::ZERO).collect();
 
         // Domain separated hashes as required by CSLAG paper
         // The hash functions have a label, and the ring members fed into it
@@ -184,7 +184,7 @@ impl Sign<Vec<Scalar>, Vec<Vec<RistrettoPoint>>> for CLSAG {
                     &[rs[i % nr], cs[i % nr]],
                     &[
                         RistrettoPoint::from_hash(
-                            Hash::default().chain(
+                            Hash::default().chain_update(
                                 ring[i % nr][0].compress().as_bytes()
                             ),
                         ),
@@ -296,7 +296,7 @@ impl Verify for CLSAG {
                     &[signature.responses[_i], reconstructed_c],
                     &[
                         RistrettoPoint::from_hash(
-                            Hash::new().chain(
+                            Hash::new().chain_update(
                                 signature.ring[_i][0].compress().as_bytes()
                             )
                         ),
@@ -329,7 +329,7 @@ mod test {
     extern crate sha3;
 
     use super::*;
-    use blake2::Blake2b;
+    use blake2::Blake2b512;
     use curve25519_dalek::ristretto::RistrettoPoint;
     use curve25519_dalek::scalar::Scalar;
     use rand::rngs::OsRng;
@@ -372,8 +372,8 @@ mod test {
 
         {
             let signature =
-                CLSAG::sign::<Blake2b, OsRng>(ks.clone(), ring.clone(), secret_index, &message);
-            let result = CLSAG::verify::<Blake2b>(signature, &message);
+                CLSAG::sign::<Blake2b512, OsRng>(ks.clone(), ring.clone(), secret_index, &message);
+            let result = CLSAG::verify::<Blake2b512>(signature, &message);
             assert!(result);
         }
 
@@ -385,14 +385,14 @@ mod test {
             })
             .collect();
         let another_message: Vec<u8> = b"This is another message".iter().cloned().collect();
-        let signature_1 = CLSAG::sign::<Blake2b, OsRng>(
+        let signature_1 = CLSAG::sign::<Blake2b512, OsRng>(
             ks.clone(),
             another_ring.clone(),
             secret_index,
             &another_message,
         );
         let signature_2 =
-            CLSAG::sign::<Blake2b, OsRng>(ks.clone(), ring.clone(), secret_index, &message);
+            CLSAG::sign::<Blake2b512, OsRng>(ks.clone(), ring.clone(), secret_index, &message);
         let result = CLSAG::link(signature_1, signature_2);
         assert!(result);
     }

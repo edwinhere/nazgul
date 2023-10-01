@@ -20,7 +20,7 @@
 
 #![no_std]
 
-#[cfg(all(feature = "alloc", not(feature = "std")))]
+#[cfg(all(feature = "no_std", not(feature = "std")))]
 #[macro_use]
 extern crate alloc;
 

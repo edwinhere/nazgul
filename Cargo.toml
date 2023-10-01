@@ -3,7 +3,7 @@ name = "nazgul"
 description = "A library that implements various ring signature schemes"
 readme = "README.md"
 license = "MIT"
-version = "0.1.10"
+version = "1.0.0"
 authors = ["Edwin Jose Palathinkal <edwinhere@gmail.com>"]
 edition = "2018"
 keywords = ["cryptography", "crypto", "ristretto", "ristretto255", "monero"]
@@ -13,32 +13,32 @@ repository = "https://github.com/edwinhere/nazgul"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-curve25519-dalek = { version = "3", default-features = false }
-digest = { version = "0.9.0", default-features = false }
-rand_core = { version = "0.5.1", default-features = false }
+curve25519-dalek = { version = "4", default-features = false }
+digest = { version = "^0.10", default-features = false }
+rand_core = { version = "^0.6.4", default-features = false }
 
 [dev-dependencies]
-sha2 = "0.9.0"
-sha3 = "0.9.0"
-blake2 = "0.9.0"
-rand = "0.7.3"
+sha2 = "^0.10"
+sha3 = "^0.10"
+blake2 = "^0.10"
+rand = "^0.8"
 
 [features]
-default = ["std", "alloc", "u64_backend"]
+default = ["std"]
 std = [
-    "curve25519-dalek/std",
     "digest/std",
-    "rand_core/std"
+    "rand_core/std",
+    "curve25519-dalek/alloc",
+    "curve25519-dalek/zeroize",
+    "curve25519-dalek/precomputed-tables",
+    "curve25519-dalek/rand_core",
+    "curve25519-dalek/digest"
 ]
-alloc = [
-    "curve25519-dalek/alloc"
-]
-u64_backend = [
-    "curve25519-dalek/u64_backend"
-]
-u32_backend = [
-    "curve25519-dalek/u32_backend"
-]
-simd_backend = [
-    "curve25519-dalek/simd_backend"
+no_std = [
+    "curve25519-dalek/alloc",
+    "curve25519-dalek/zeroize",
+    "curve25519-dalek/rand_core",
+    "curve25519-dalek/digest",
+    "rand_core/alloc",
+    "digest/alloc"
 ]

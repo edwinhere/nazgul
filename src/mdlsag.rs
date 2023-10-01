@@ -47,7 +47,7 @@ impl KeyImageGen<Vec<(Scalar, RistrettoPoint, Scalar)>, Vec<RistrettoPoint>> for
                 ks[j].2
                     * ks[j].0
                     * RistrettoPoint::from_hash(
-                        Hash::default().chain(k_points[j].1.compress().as_bytes()),
+                        Hash::default().chain_update(k_points[j].1.compress().as_bytes()),
                     )
             })
             .collect();
@@ -74,7 +74,7 @@ impl KeyImageGen<Vec<(RistrettoPoint, Scalar, Scalar)>, Vec<RistrettoPoint>> for
                 ks[j].2
                     * ks[j].1
                     * RistrettoPoint::from_hash(
-                        Hash::default().chain(k_points[j].0.compress().as_bytes()),
+                        Hash::default().chain_update(k_points[j].0.compress().as_bytes()),
                     )
             })
             .collect();
@@ -127,7 +127,7 @@ impl Sign<Vec<(Scalar, RistrettoPoint, Scalar)>, Vec<Vec<(RistrettoPoint, Ristre
             .map(|_| (0..nc).map(|_| Scalar::random(&mut csprng)).collect())
             .collect();
 
-        let mut cs: Vec<Scalar> = (0..nr).map(|_| Scalar::zero()).collect();
+        let mut cs: Vec<Scalar> = (0..nr).map(|_| Scalar::ZERO).collect();
 
         // Hash of message is shared by all challenges H_n(m, ....)
         let mut message_hash = Hash::default();
@@ -146,7 +146,7 @@ impl Sign<Vec<(Scalar, RistrettoPoint, Scalar)>, Vec<Vec<(RistrettoPoint, Ristre
                 (a[j]
                     * ring[secret_index][j].2
                     * RistrettoPoint::from_hash(
-                        Hash::default().chain(k_points[j].1.compress().as_bytes()),
+                        Hash::default().chain_update(k_points[j].1.compress().as_bytes()),
                     ))
                 .compress()
                 .as_bytes(),
@@ -174,7 +174,7 @@ impl Sign<Vec<(Scalar, RistrettoPoint, Scalar)>, Vec<Vec<(RistrettoPoint, Ristre
                         &[rs[i % nr][j], cs[i % nr]],
                         &[
                             ring[i % nr][j].2 * RistrettoPoint::from_hash(
-                                Hash::default().chain(
+                                Hash::default().chain_update(
                                     ring[i % nr][j].1.compress().as_bytes()),
                             ),
                             key_images[j]
@@ -253,7 +253,7 @@ impl Sign<Vec<(RistrettoPoint, Scalar, Scalar)>, Vec<Vec<(RistrettoPoint, Ristre
             .map(|_| (0..nc).map(|_| Scalar::random(&mut csprng)).collect())
             .collect();
 
-        let mut cs: Vec<Scalar> = (0..nr).map(|_| Scalar::zero()).collect();
+        let mut cs: Vec<Scalar> = (0..nr).map(|_| Scalar::ZERO).collect();
 
         // Hash of message is shared by all challenges H_n(m, ....)
         let mut message_hash = Hash::default();
@@ -272,7 +272,7 @@ impl Sign<Vec<(RistrettoPoint, Scalar, Scalar)>, Vec<Vec<(RistrettoPoint, Ristre
                 (a[j]
                     * ring[secret_index][j].2
                     * RistrettoPoint::from_hash(
-                        Hash::default().chain(k_points[j].0.compress().as_bytes()),
+                        Hash::default().chain_update(k_points[j].0.compress().as_bytes()),
                     ))
                 .compress()
                 .as_bytes(),
@@ -300,7 +300,7 @@ impl Sign<Vec<(RistrettoPoint, Scalar, Scalar)>, Vec<Vec<(RistrettoPoint, Ristre
                         &[rs[i % nr][j], cs[i % nr]],
                         &[
                             ring[i % nr][j].2 * RistrettoPoint::from_hash(
-                                Hash::default().chain(
+                                Hash::default().chain_update(
                                     ring[i % nr][j].0.compress().as_bytes()
                                 )
                             ),
@@ -370,7 +370,7 @@ impl Verify for MDLSAG {
                             &[signature.responses[_i][j], reconstructed_c],
                             &[
                                 signature.ring[_i][j].2 * RistrettoPoint::from_hash(
-                                    Hash::default().chain(
+                                    Hash::default().chain_update(
                                         signature.ring[_i][j].0.compress().as_bytes()
                                     )
                                 ),
@@ -395,7 +395,7 @@ impl Verify for MDLSAG {
                             &[signature.responses[_i][j], reconstructed_c],
                             &[
                                 signature.ring[_i][j].2 * RistrettoPoint::from_hash(
-                                    Hash::default().chain(
+                                    Hash::default().chain_update(
                                         signature.ring[_i][j].1.compress().as_bytes()
                                     )
                                 ),
@@ -446,7 +446,7 @@ mod test {
     extern crate sha3;
 
     use super::*;
-    use blake2::Blake2b;
+    use blake2::Blake2b512;
     use curve25519_dalek::ristretto::RistrettoPoint;
     use curve25519_dalek::scalar::Scalar;
     use rand::rngs::OsRng;
@@ -510,8 +510,8 @@ mod test {
 
         {
             let signature =
-                MDLSAG::sign::<Blake2b, OsRng>(ks.clone(), ring.clone(), secret_index, &message);
-            let result = MDLSAG::verify::<Blake2b>(signature, &message);
+                MDLSAG::sign::<Blake2b512, OsRng>(ks.clone(), ring.clone(), secret_index, &message);
+            let result = MDLSAG::verify::<Blake2b512>(signature, &message);
             assert!(result);
         }
 
@@ -538,13 +538,13 @@ mod test {
         }
 
         {
-            let signature = MDLSAG::sign::<Blake2b, OsRng>(
+            let signature = MDLSAG::sign::<Blake2b512, OsRng>(
                 other_ks.clone(),
                 ring.clone(),
                 secret_index,
                 &message,
             );
-            let result = MDLSAG::verify::<Blake2b>(signature, &message);
+            let result = MDLSAG::verify::<Blake2b512>(signature, &message);
             assert!(result);
         }
 
@@ -563,16 +563,16 @@ mod test {
                 })
                 .collect();
         let another_message: Vec<u8> = b"This is another message".iter().cloned().collect();
-        let signature_1 = MDLSAG::sign::<Blake2b, OsRng>(
+        let signature_1 = MDLSAG::sign::<Blake2b512, OsRng>(
             ks.clone(),
             another_ring.clone(),
             secret_index,
             &another_message,
         );
         let signature_2 =
-            MDLSAG::sign::<Blake2b, OsRng>(ks.clone(), ring.clone(), secret_index, &message);
+            MDLSAG::sign::<Blake2b512, OsRng>(ks.clone(), ring.clone(), secret_index, &message);
         let signature_3 =
-            MDLSAG::sign::<Blake2b, OsRng>(other_ks.clone(), ring.clone(), secret_index, &message);
+            MDLSAG::sign::<Blake2b512, OsRng>(other_ks.clone(), ring.clone(), secret_index, &message);
         let result_1 = MDLSAG::link(signature_1.clone(), signature_2);
         assert!(result_1);
         let result_2 = MDLSAG::link(signature_1.clone(), signature_3);

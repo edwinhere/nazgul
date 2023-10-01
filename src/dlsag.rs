@@ -41,7 +41,7 @@ impl KeyImageGen<(Scalar, RistrettoPoint, Scalar), RistrettoPoint> for DLSAG {
 
         let key_image: RistrettoPoint = k.2
             * k.0
-            * RistrettoPoint::from_hash(Hash::default().chain(k_point.1.compress().as_bytes()));
+            * RistrettoPoint::from_hash(Hash::default().chain_update(k_point.1.compress().as_bytes()));
 
         return key_image;
     }
@@ -58,7 +58,7 @@ impl KeyImageGen<(RistrettoPoint, Scalar, Scalar), RistrettoPoint> for DLSAG {
 
         let key_image: RistrettoPoint = k.2
             * k.1
-            * RistrettoPoint::from_hash(Hash::default().chain(k_point.0.compress().as_bytes()));
+            * RistrettoPoint::from_hash(Hash::default().chain_update(k_point.0.compress().as_bytes()));
 
         return key_image;
     }
@@ -105,7 +105,7 @@ for DLSAG
 
         let mut rs: Vec<Scalar> = (0..n).map(|_| Scalar::random(&mut csprng)).collect();
 
-        let mut cs: Vec<Scalar> = (0..n).map(|_| Scalar::zero()).collect();
+        let mut cs: Vec<Scalar> = (0..n).map(|_| Scalar::ZERO).collect();
 
         // Hash of message is shared by all challenges H_n(m, ....)
         let mut message_hash = Hash::default();
@@ -122,7 +122,7 @@ for DLSAG
         hashes[(secret_index + 1) % n].update(
             (a * ring[secret_index].2
                 * RistrettoPoint::from_hash(
-                Hash::default().chain(k_point.1.compress().as_bytes()),
+                Hash::default().chain_update(k_point.1.compress().as_bytes()),
             ))
                 .compress()
                 .as_bytes(),
@@ -145,7 +145,7 @@ for DLSAG
                     &[rs[i % n], cs[i % n]],
                     &[
                         ring[i % n].2 * RistrettoPoint::from_hash(
-                            Hash::default().chain(
+                            Hash::default().chain_update(
                                 ring[i % n].1.compress().as_bytes()
                             )
                         ),
@@ -219,7 +219,7 @@ for DLSAG
 
         let mut rs: Vec<Scalar> = (0..n).map(|_| Scalar::random(&mut csprng)).collect();
 
-        let mut cs: Vec<Scalar> = (0..n).map(|_| Scalar::zero()).collect();
+        let mut cs: Vec<Scalar> = (0..n).map(|_| Scalar::ZERO).collect();
 
         // Hash of message is shared by all challenges H_n(m, ....)
         let mut message_hash = Hash::default();
@@ -236,7 +236,7 @@ for DLSAG
         hashes[(secret_index + 1) % n].update(
             (a * ring[secret_index].2
                 * RistrettoPoint::from_hash(
-                Hash::default().chain(k_point.0.compress().as_bytes()),
+                Hash::default().chain_update(k_point.0.compress().as_bytes()),
             ))
                 .compress()
                 .as_bytes(),
@@ -262,7 +262,7 @@ for DLSAG
                     &[rs[i % n], cs[i % n]],
                     &[
                         ring[i % n].2 * RistrettoPoint::from_hash(
-                            Hash::default().chain(
+                            Hash::default().chain_update(
                                 ring[i % n].0.compress().as_bytes()
                             ),
                         ),
@@ -324,7 +324,7 @@ impl Verify for DLSAG {
                         &[signature.responses[j], reconstructed_c],
                         &[
                             signature.ring[j].2 * RistrettoPoint::from_hash(
-                            Hash::default().chain(
+                            Hash::default().chain_update(
                                     signature.ring[j].0.compress().as_bytes()
                                 ),
                             ),
@@ -352,7 +352,7 @@ impl Verify for DLSAG {
                         &[signature.responses[j], reconstructed_c],
                         &[
                             signature.ring[j].2 * RistrettoPoint::from_hash(
-                                Hash::default().chain(
+                                Hash::default().chain_update(
                                     signature.ring[j].1.compress().as_bytes()
                                 )
                             ),
@@ -384,7 +384,7 @@ mod test {
     extern crate sha2;
     extern crate sha3;
 
-    use blake2::Blake2b;
+    use blake2::Blake2b512;
     use curve25519_dalek::ristretto::RistrettoPoint;
     use curve25519_dalek::scalar::Scalar;
     use rand::rngs::OsRng;
@@ -434,8 +434,8 @@ mod test {
         }
 
         {
-            let signature = DLSAG::sign::<Blake2b, OsRng>(k, ring.clone(), secret_index, &message);
-            let result = DLSAG::verify::<Blake2b>(signature, &message);
+            let signature = DLSAG::sign::<Blake2b512, OsRng>(k, ring.clone(), secret_index, &message);
+            let result = DLSAG::verify::<Blake2b512>(signature, &message);
             assert!(result);
         }
 
@@ -456,8 +456,8 @@ mod test {
 
         {
             let signature =
-                DLSAG::sign::<Blake2b, OsRng>(other_k, ring.clone(), secret_index, &message);
-            let result = DLSAG::verify::<Blake2b>(signature, &message);
+                DLSAG::sign::<Blake2b512, OsRng>(other_k, ring.clone(), secret_index, &message);
+            let result = DLSAG::verify::<Blake2b512>(signature, &message);
             assert!(result);
         }
 
@@ -472,10 +472,10 @@ mod test {
             .collect();
         let another_message: Vec<u8> = b"This is another message".iter().cloned().collect();
         let signature_1 =
-            DLSAG::sign::<Blake2b, OsRng>(k, another_ring.clone(), secret_index, &another_message);
-        let signature_2 = DLSAG::sign::<Blake2b, OsRng>(k, ring.clone(), secret_index, &message);
+            DLSAG::sign::<Blake2b512, OsRng>(k, another_ring.clone(), secret_index, &another_message);
+        let signature_2 = DLSAG::sign::<Blake2b512, OsRng>(k, ring.clone(), secret_index, &message);
         let signature_3 =
-            DLSAG::sign::<Blake2b, OsRng>(other_k, ring.clone(), secret_index, &message);
+            DLSAG::sign::<Blake2b512, OsRng>(other_k, ring.clone(), secret_index, &message);
         let result_1 = DLSAG::link(signature_1.clone(), signature_2);
         assert!(result_1);
         let result_2 = DLSAG::link(signature_1.clone(), signature_3);

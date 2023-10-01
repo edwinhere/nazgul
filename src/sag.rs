@@ -36,7 +36,7 @@ impl Sign<Scalar, Vec<RistrettoPoint>> for SAG {
         ring.insert(secret_index, k_point);
         let a: Scalar = Scalar::random(&mut csprng);
         let mut rs: Vec<Scalar> = (0..n).map(|_| Scalar::random(&mut csprng)).collect();
-        let mut cs: Vec<Scalar> = (0..n).map(|_| Scalar::zero()).collect();
+        let mut cs: Vec<Scalar> = (0..n).map(|_| Scalar::ZERO).collect();
         let mut group_and_message_hash = Hash::new();
         for k_point in &ring {
             group_and_message_hash.update(k_point.compress().as_bytes());
@@ -112,7 +112,7 @@ mod test {
     extern crate sha2;
     extern crate sha3;
 
-    use blake2::Blake2b;
+    use blake2::Blake2b512;
     use curve25519_dalek::ristretto::RistrettoPoint;
     use curve25519_dalek::scalar::Scalar;
     use rand::rngs::OsRng;
@@ -145,8 +145,8 @@ mod test {
         }
 
         {
-            let signature = SAG::sign::<Blake2b, OsRng>(k, ring.clone(), secret_index, &message);
-            let result = SAG::verify::<Blake2b>(signature, &message);
+            let signature = SAG::sign::<Blake2b512, OsRng>(k, ring.clone(), secret_index, &message);
+            let result = SAG::verify::<Blake2b512>(signature, &message);
             assert!(result);
         }
     }

@@ -30,7 +30,7 @@ impl KeyImageGen<Scalar, RistrettoPoint> for BLSAG {
         let k_point: RistrettoPoint = k * constants::RISTRETTO_BASEPOINT_POINT;
 
         let key_image: RistrettoPoint =
-            k * RistrettoPoint::from_hash(Hash::default().chain(k_point.compress().as_bytes()));
+            k * RistrettoPoint::from_hash(Hash::default().chain_update(k_point.compress().as_bytes()));
 
         return key_image;
     }
@@ -63,7 +63,7 @@ impl Sign<Scalar, Vec<RistrettoPoint>> for BLSAG {
 
         let mut rs: Vec<Scalar> = (0..n).map(|_| Scalar::random(&mut csprng)).collect();
 
-        let mut cs: Vec<Scalar> = (0..n).map(|_| Scalar::zero()).collect();
+        let mut cs: Vec<Scalar> = (0..n).map(|_| Scalar::ZERO).collect();
 
         // Hash of message is shared by all challenges H_n(m, ....)
         let mut message_hash = Hash::default();
@@ -78,7 +78,7 @@ impl Sign<Scalar, Vec<RistrettoPoint>> for BLSAG {
                 .as_bytes(),
         );
         hashes[(secret_index + 1) % n].update(
-            (a * RistrettoPoint::from_hash(Hash::default().chain(k_point.compress().as_bytes())))
+            (a * RistrettoPoint::from_hash(Hash::default().chain_update(k_point.compress().as_bytes())))
                 .compress()
                 .as_bytes(),
         );
@@ -101,7 +101,7 @@ impl Sign<Scalar, Vec<RistrettoPoint>> for BLSAG {
                     &[
                         RistrettoPoint::from_hash(
                             Hash::default()
-                                .chain(ring[i % n].compress().as_bytes())
+                                .chain_update(ring[i % n].compress().as_bytes())
                         ),
                         key_image
                     ])
@@ -154,7 +154,7 @@ impl Verify for BLSAG {
                 RistrettoPoint::multiscalar_mul(
                     &[signature.responses[j], reconstructed_c],
                     &[RistrettoPoint::from_hash(
-                            Hash::default().chain(
+                            Hash::default().chain_update(
                                 signature.ring[j].compress().as_bytes()
                             ),
                         ),
@@ -187,7 +187,7 @@ mod test {
     extern crate sha3;
 
     use super::*;
-    use blake2::Blake2b;
+    use blake2::Blake2b512;
     use curve25519_dalek::ristretto::RistrettoPoint;
     use curve25519_dalek::scalar::Scalar;
     use rand::rngs::OsRng;
@@ -219,8 +219,8 @@ mod test {
         }
 
         {
-            let signature = BLSAG::sign::<Blake2b, OsRng>(k, ring.clone(), secret_index, &message);
-            let result = BLSAG::verify::<Blake2b>(signature, &message);
+            let signature = BLSAG::sign::<Blake2b512, OsRng>(k, ring.clone(), secret_index, &message);
+            let result = BLSAG::verify::<Blake2b512>(signature, &message);
             assert!(result);
         }
 
@@ -230,8 +230,8 @@ mod test {
                 .collect();
         let another_message: Vec<u8> = b"This is another message".iter().cloned().collect();
         let signature_1 =
-            BLSAG::sign::<Blake2b, OsRng>(k, another_ring.clone(), secret_index, &another_message);
-        let signature_2 = BLSAG::sign::<Blake2b, OsRng>(k, ring.clone(), secret_index, &message);
+            BLSAG::sign::<Blake2b512, OsRng>(k, another_ring.clone(), secret_index, &another_message);
+        let signature_2 = BLSAG::sign::<Blake2b512, OsRng>(k, ring.clone(), secret_index, &message);
         let result = BLSAG::link(signature_1, signature_2);
         assert!(result);
     }
