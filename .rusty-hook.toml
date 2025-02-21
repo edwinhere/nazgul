@@ -3,6 +3,7 @@ pre-commit = """
 cargo test && \
 cargo test --features serde-derive && \
 cargo test --no-default-features --features no_std && \
+cargo audit && \
 cargo bump patch && \
 git add Cargo.toml
 """

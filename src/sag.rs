@@ -4,14 +4,14 @@ use curve25519_dalek::constants;
 use curve25519_dalek::ristretto::RistrettoPoint;
 use curve25519_dalek::scalar::Scalar;
 use curve25519_dalek::traits::MultiscalarMul;
-use digest::Digest;
 use digest::generic_array::typenum::U64;
+use digest::Digest;
 use rand_core::{CryptoRng, RngCore};
 
 use crate::traits::{Sign, Verify};
 
 #[cfg(feature = "serde")]
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 /// Spontaneous Anonymous Group (SAG) signatures
 /// > This non-linkable ring signature that allows spontaneous groups, provided here for conceptual clarity
@@ -29,11 +29,14 @@ pub struct SAG {
 impl Sign<Scalar, Vec<RistrettoPoint>> for SAG {
     /// To sign you need `k` your private key, and `ring` which is the public keys of everyone
     /// except you. You are signing the `message`
-    fn sign<Hash: Digest<OutputSize=U64> + Clone, CSPRNG: CryptoRng + RngCore + Default>(
+    fn sign<
+        Hash: Digest<OutputSize = U64> + Clone + Default,
+        CSPRNG: CryptoRng + RngCore + Default,
+    >(
         k: Scalar,
         mut ring: Vec<RistrettoPoint>,
         secret_index: usize,
-        message: &Vec<u8>,
+        message: &[u8],
     ) -> SAG {
         let mut csprng: CSPRNG = CSPRNG::default();
         let k_point: RistrettoPoint = k * constants::RISTRETTO_BASEPOINT_POINT;
@@ -61,30 +64,33 @@ impl Sign<Scalar, Vec<RistrettoPoint>> for SAG {
                     &[rs[i % n], cs[i % n]],
                     &[constants::RISTRETTO_BASEPOINT_POINT, ring[i % n]],
                 )
-                    .compress()
-                    .as_bytes(),
+                .compress()
+                .as_bytes(),
             );
             cs[(i + 1) % n] = Scalar::from_hash(hashes[(i + 1) % n].clone());
-            if secret_index >= 1 && i % n == (secret_index - 1) % n {
-                break;
-            } else if secret_index == 0 && i % n == n - 1 {
+            if (secret_index >= 1 && i % n == (secret_index - 1) % n)
+                || (secret_index == 0 && i % n == n - 1)
+            {
                 break;
             } else {
                 i = (i + 1) % n;
             }
         }
         rs[secret_index] = a - (cs[secret_index] * k);
-        return SAG {
+        SAG {
             challenge: cs[0],
             responses: rs,
-            ring: ring,
-        };
+            ring,
+        }
     }
 }
 
 impl Verify for SAG {
     /// To verify a `signature` you need the `message` too
-    fn verify<Hash: Digest<OutputSize=U64> + Clone>(signature: SAG, message: &Vec<u8>) -> bool {
+    fn verify<Hash: Digest<OutputSize = U64> + Clone + Default>(
+        signature: SAG,
+        message: &[u8],
+    ) -> bool {
         let n = signature.ring.len();
         let mut reconstructed_c: Scalar = signature.challenge;
         let mut group_and_message_hash = Hash::new();
@@ -99,13 +105,13 @@ impl Verify for SAG {
                     &[signature.responses[j], reconstructed_c],
                     &[constants::RISTRETTO_BASEPOINT_POINT, signature.ring[j]],
                 )
-                    .compress()
-                    .as_bytes(),
+                .compress()
+                .as_bytes(),
             );
             reconstructed_c = Scalar::from_hash(h);
         }
 
-        return signature.challenge == reconstructed_c;
+        signature.challenge == reconstructed_c
     }
 }
 
@@ -127,9 +133,10 @@ mod test {
             let k: Scalar = Scalar::random(&mut csprng);
             let secret_index = 1;
             let n = 2;
-            let ring: Vec<RistrettoPoint> = (0..(n - 1)) // Prover is going to add our key into this mix
-                .map(|_| RistrettoPoint::random(&mut csprng))
-                .collect();
+            let ring: Vec<RistrettoPoint> =
+                (0..(n - 1)) // Prover is going to add our key into this mix
+                    .map(|_| RistrettoPoint::random(&mut csprng))
+                    .collect();
             let message: Vec<u8> = b"This is the message".iter().cloned().collect();
 
             {
@@ -139,13 +146,15 @@ mod test {
             }
 
             {
-                let signature = SAG::sign::<Keccak512, OsRng>(k, ring.clone(), secret_index, &message);
+                let signature =
+                    SAG::sign::<Keccak512, OsRng>(k, ring.clone(), secret_index, &message);
                 let result = SAG::verify::<Keccak512>(signature, &message);
                 assert!(result);
             }
 
             {
-                let signature = SAG::sign::<Blake2b512, OsRng>(k, ring.clone(), secret_index, &message);
+                let signature =
+                    SAG::sign::<Blake2b512, OsRng>(k, ring.clone(), secret_index, &message);
                 let result = SAG::verify::<Blake2b512>(signature, &message);
                 assert!(result);
             }

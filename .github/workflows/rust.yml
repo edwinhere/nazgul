@@ -2,9 +2,8 @@ name: Rust Tests
 
 on:
   push:
-    branches: [ main ]
+    branches: [ master ]
   pull_request:
-    branches: [ main ]
 
 env:
   CARGO_TERM_COLOR: always
@@ -20,6 +19,9 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
+
+      - name: Install cargo-audit
+        run: cargo install cargo-audit
 
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v2
@@ -43,4 +45,7 @@ jobs:
         run: cargo clippy --no-default-features --features no_std -- -D warnings
 
       - name: Run clippy on serde
-        run: cargo clippy --features serde-derive -- -D warnings 
+        run: cargo clippy --features serde-derive -- -D warnings
+
+      - name: Run security audit
+        run: cargo audit 

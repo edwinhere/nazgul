@@ -1,21 +1,21 @@
-use crate::traits::{KeyImageGen, Link, Sign, Verify};
 use crate::prelude::*;
+use crate::traits::{KeyImageGen, Link, Sign, Verify};
 use curve25519_dalek::constants;
 use curve25519_dalek::ristretto::RistrettoPoint;
 use curve25519_dalek::scalar::Scalar;
+use curve25519_dalek::traits::MultiscalarMul;
 use digest::generic_array::typenum::U64;
 use digest::Digest;
 use rand_core::{CryptoRng, RngCore};
-use curve25519_dalek::traits::MultiscalarMul;
 
 #[cfg(feature = "serde")]
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 /// Concise Linkable Spontaneous Anonymous Group (CLSAG) signatures
-/// > CLSAG is sort of half-way between bLSAG and MLSAG. Suppose you have a 'primary' key, and
-/// associated with it are several 'auxiliary' keys. It is important to prove knowledge of all
-/// private keys, but linkability only applies to the primary. This linkability retraction allows
-/// smaller, faster signatures than afforded by MLSAG.
+/// > In order to sign transactions, one has to sign with multiple private keys. In
+/// > associated with it are several 'auxiliary' keys. It is important to prove knowledge of all
+/// > private keys, but linkability only applies to the primary. This linkability retraction allows
+/// > smaller, faster signatures than afforded by MLSAG.
 ///
 /// Please read tests at the bottom of the source code for this module for examples on how to use
 /// it
@@ -47,13 +47,14 @@ impl KeyImageGen<Vec<Scalar>, Vec<RistrettoPoint>> for CLSAG {
 
         // This is the base key
         // i.e. the first public key for which the prover has the private key
-        let base_key_hashed_to_point: RistrettoPoint =
-            RistrettoPoint::from_hash(Hash::default().chain_update(k_points[0].compress().as_bytes()));
+        let base_key_hashed_to_point: RistrettoPoint = RistrettoPoint::from_hash(
+            Hash::default().chain_update(k_points[0].compress().as_bytes()),
+        );
 
         let key_images: Vec<RistrettoPoint> =
             ks.iter().map(|k| k * base_key_hashed_to_point).collect();
 
-        return key_images;
+        key_images
     }
 }
 
@@ -68,7 +69,7 @@ impl Sign<Vec<Scalar>, Vec<Vec<RistrettoPoint>>> for CLSAG {
         ks: Vec<Scalar>,
         mut ring: Vec<Vec<RistrettoPoint>>,
         secret_index: usize,
-        message: &Vec<u8>,
+        message: &[u8],
     ) -> CLSAG {
         let mut csprng = CSPRNG::default();
 
@@ -83,8 +84,9 @@ impl Sign<Vec<Scalar>, Vec<Vec<RistrettoPoint>>> for CLSAG {
 
         // This is the base key
         // i.e. the first public key for which the prover has the private key
-        let base_key_hashed_to_point: RistrettoPoint =
-            RistrettoPoint::from_hash(Hash::default().chain_update(k_points[0].compress().as_bytes()));
+        let base_key_hashed_to_point: RistrettoPoint = RistrettoPoint::from_hash(
+            Hash::default().chain_update(k_points[0].compress().as_bytes()),
+        );
 
         let key_images: Vec<RistrettoPoint> = CLSAG::generate_key_image::<Hash>(ks.clone());
 
@@ -101,13 +103,13 @@ impl Sign<Vec<Scalar>, Vec<Vec<RistrettoPoint>>> for CLSAG {
         let prefixed_hashes: Vec<Hash> = (0..nc)
             .map(|index| {
                 let mut h: Hash = Hash::default();
-                h.update(format!("CSLAG_{}", index));
-                for i in 0..nr {
-                    for j in 0..nc {
-                        h.update(ring[i][j].compress().as_bytes());
+                h.update(format!("CSLAG_{}", index).as_bytes());
+                for row in ring.iter().take(nr) {
+                    for key in row.iter().take(nc) {
+                        h.update(key.compress().as_bytes());
                     }
                 }
-                return h;
+                h
             })
             .collect();
 
@@ -116,49 +118,49 @@ impl Sign<Vec<Scalar>, Vec<Vec<RistrettoPoint>>> for CLSAG {
         let prefixed_hashes_with_key_images: Vec<Hash> = (0..nc)
             .map(|index| {
                 let mut h: Hash = prefixed_hashes[index].clone();
-                for j in 0..nc {
-                    h.update(key_images[j].compress().as_bytes());
+                for key_image in key_images.iter().take(nc) {
+                    h.update(key_image.compress().as_bytes());
                 }
-                return h;
+                h
             })
             .collect();
 
         let aggregate_private_key: Scalar = (0..nc)
             .map(|j| {
                 let h: Hash = prefixed_hashes_with_key_images[j].clone();
-                return Scalar::from_hash(h) * ks[j];
+                Scalar::from_hash(h) * ks[j]
             })
             .sum();
 
         let aggregate_public_keys: Vec<RistrettoPoint> = (0..nr)
             .map(|i| {
-                return (0..nc)
+                (0..nc)
                     .map(|j| {
                         let h: Hash = prefixed_hashes_with_key_images[j].clone();
-                        return Scalar::from_hash(h.clone()) * ring[i][j];
+                        Scalar::from_hash(h.clone()) * ring[i][j]
                     })
-                    .sum();
+                    .sum()
             })
             .collect();
 
         let aggregate_key_image: RistrettoPoint = (0..nc)
             .map(|j| {
                 let h: Hash = prefixed_hashes_with_key_images[j].clone();
-                return Scalar::from_hash(h.clone()) * key_images[j];
+                Scalar::from_hash(h.clone()) * key_images[j]
             })
             .sum();
 
         let mut hashes: Vec<Hash> = (0..nr)
             .map(|_| {
                 let mut h: Hash = Hash::default();
-                h.update(format!("CSLAG_c"));
-                for i in 0..nr {
-                    for j in 0..nc {
-                        h.update(ring[i][j].compress().as_bytes());
+                h.update(b"CSLAG_c");
+                for row in ring.iter().take(nr) {
+                    for key in row.iter().take(nc) {
+                        h.update(key.compress().as_bytes());
                     }
                 }
                 h.update(message);
-                return h;
+                h
             })
             .collect();
 
@@ -167,7 +169,8 @@ impl Sign<Vec<Scalar>, Vec<Vec<RistrettoPoint>>> for CLSAG {
                 .compress()
                 .as_bytes(),
         );
-        hashes[(secret_index + 1) % nr].update((a * base_key_hashed_to_point).compress().as_bytes());
+        hashes[(secret_index + 1) % nr]
+            .update((a * base_key_hashed_to_point).compress().as_bytes());
         cs[(secret_index + 1) % nr] = Scalar::from_hash(hashes[(secret_index + 1) % nr].clone());
 
         let mut i = (secret_index + 1) % nr;
@@ -178,32 +181,30 @@ impl Sign<Vec<Scalar>, Vec<Vec<RistrettoPoint>>> for CLSAG {
                     &[rs[i % nr], cs[i % nr]],
                     &[
                         constants::RISTRETTO_BASEPOINT_POINT,
-                        aggregate_public_keys[i % nr]
-                    ]
+                        aggregate_public_keys[i % nr],
+                    ],
                 )
-                    .compress()
-                    .as_bytes(),
+                .compress()
+                .as_bytes(),
             );
             hashes[(i + 1) % nr].update(
                 RistrettoPoint::multiscalar_mul(
                     &[rs[i % nr], cs[i % nr]],
                     &[
                         RistrettoPoint::from_hash(
-                            Hash::default().chain_update(
-                                ring[i % nr][0].compress().as_bytes()
-                            ),
+                            Hash::default().chain_update(ring[i % nr][0].compress().as_bytes()),
                         ),
-                        aggregate_key_image
-                    ]
+                        aggregate_key_image,
+                    ],
                 )
-                    .compress()
-                    .as_bytes(),
+                .compress()
+                .as_bytes(),
             );
             cs[(i + 1) % nr] = Scalar::from_hash(hashes[(i + 1) % nr].clone());
 
-            if secret_index >= 1 && i % nr == (secret_index - 1) % nr {
-                break;
-            } else if secret_index == 0 && i % nr == nr - 1 {
+            if (secret_index >= 1 && i % nr == (secret_index - 1) % nr)
+                || (secret_index == 0 && i % nr == nr - 1)
+            {
                 break;
             } else {
                 i = (i + 1) % nr;
@@ -212,12 +213,12 @@ impl Sign<Vec<Scalar>, Vec<Vec<RistrettoPoint>>> for CLSAG {
 
         rs[secret_index] = a - (cs[secret_index] * aggregate_private_key);
 
-        return CLSAG {
+        CLSAG {
             challenge: cs[0],
             responses: rs,
-            ring: ring,
-            key_images: key_images,
-        };
+            ring,
+            key_images,
+        }
     }
 }
 
@@ -225,7 +226,7 @@ impl Verify for CLSAG {
     /// To verify a `signature` you need the `message` too
     fn verify<Hash: Digest<OutputSize = U64> + Clone + Default>(
         signature: CLSAG,
-        message: &Vec<u8>,
+        message: &[u8],
     ) -> bool {
         let nr = signature.ring.len();
         let nc = signature.ring[0].len();
@@ -236,13 +237,13 @@ impl Verify for CLSAG {
         let prefixed_hashes: Vec<Hash> = (0..nc)
             .map(|index| {
                 let mut h: Hash = Hash::default();
-                h.update(format!("CSLAG_{}", index));
-                for i in 0..nr {
-                    for j in 0..nc {
-                        h.update(signature.ring[i][j].compress().as_bytes());
+                h.update(format!("CSLAG_{}", index).as_bytes());
+                for row in signature.ring.iter().take(nr) {
+                    for key in row.iter().take(nc) {
+                        h.update(key.compress().as_bytes());
                     }
                 }
-                return h;
+                h
             })
             .collect();
 
@@ -251,77 +252,72 @@ impl Verify for CLSAG {
         let prefixed_hashes_with_key_images: Vec<Hash> = (0..nc)
             .map(|index| {
                 let mut h: Hash = prefixed_hashes[index].clone();
-                for j in 0..nc {
-                    h.update(signature.key_images[j].compress().as_bytes());
+                for key_image in signature.key_images.iter().take(nc) {
+                    h.update(key_image.compress().as_bytes());
                 }
-                return h;
+                h
             })
             .collect();
 
         let aggregate_public_keys: Vec<RistrettoPoint> = (0..nr)
             .map(|i| {
-                return (0..nc)
+                (0..nc)
                     .map(|j| {
                         let h: Hash = prefixed_hashes_with_key_images[j].clone();
-                        return Scalar::from_hash(h.clone()) * signature.ring[i][j];
+                        Scalar::from_hash(h.clone()) * signature.ring[i][j]
                     })
-                    .sum();
+                    .sum()
             })
             .collect();
 
         let aggregate_key_image: RistrettoPoint = (0..nc)
             .map(|j| {
                 let h: Hash = prefixed_hashes_with_key_images[j].clone();
-                return Scalar::from_hash(h.clone()) * signature.key_images[j];
+                Scalar::from_hash(h.clone()) * signature.key_images[j]
             })
             .sum();
-        for _i in 0..nr {
+        for (i, aggregate_public_key) in aggregate_public_keys.iter().enumerate().take(nr) {
             let mut h: Hash = Hash::default();
-            h.update(format!("CSLAG_c"));
-            for i in 0..nr {
-                for j in 0..nc {
-                    h.update(signature.ring[i][j].compress().as_bytes());
+            h.update(b"CSLAG_c");
+            for row in signature.ring.iter().take(nr) {
+                for key in row.iter().take(nc) {
+                    h.update(key.compress().as_bytes());
                 }
             }
             h.update(message);
             h.update(
                 RistrettoPoint::multiscalar_mul(
-                    &[signature.responses[_i], reconstructed_c],
-                    &[
-                        constants::RISTRETTO_BASEPOINT_POINT,
-                        aggregate_public_keys[_i]
-                    ]
+                    &[signature.responses[i], reconstructed_c],
+                    &[constants::RISTRETTO_BASEPOINT_POINT, *aggregate_public_key],
                 )
-                    .compress()
-                    .as_bytes(),
+                .compress()
+                .as_bytes(),
             );
 
             h.update(
                 RistrettoPoint::multiscalar_mul(
-                    &[signature.responses[_i], reconstructed_c],
+                    &[signature.responses[i], reconstructed_c],
                     &[
                         RistrettoPoint::from_hash(
-                            Hash::new().chain_update(
-                                signature.ring[_i][0].compress().as_bytes()
-                            )
+                            Hash::new().chain_update(signature.ring[i][0].compress().as_bytes()),
                         ),
-                        aggregate_key_image
-                    ]
+                        aggregate_key_image,
+                    ],
                 )
-                    .compress()
-                    .as_bytes(),
+                .compress()
+                .as_bytes(),
             );
             reconstructed_c = Scalar::from_hash(h);
         }
 
-        return signature.challenge == reconstructed_c;
+        signature.challenge == reconstructed_c
     }
 }
 
 impl Link for CLSAG {
     /// This is for linking two signatures and checking if they are signed by the same person
     fn link(signature_1: CLSAG, signature_2: CLSAG) -> bool {
-        return signature_1.key_images[0] == signature_2.key_images[0];
+        signature_1.key_images[0] == signature_2.key_images[0]
     }
 }
 
