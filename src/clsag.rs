@@ -12,14 +12,15 @@ use curve25519_dalek::traits::MultiscalarMul;
 use serde::{Serialize, Deserialize};
 
 /// Concise Linkable Spontaneous Anonymous Group (CLSAG) signatures
-/// > CLSAG is sort of half-way between bLSAG and MLSAG. Suppose you have a ‘primary’ key, and
-/// associated with it are several ‘auxiliary’ keys. It is important to prove knowledge of all
+/// > CLSAG is sort of half-way between bLSAG and MLSAG. Suppose you have a 'primary' key, and
+/// associated with it are several 'auxiliary' keys. It is important to prove knowledge of all
 /// private keys, but linkability only applies to the primary. This linkability retraction allows
 /// smaller, faster signatures than afforded by MLSAG.
 ///
 /// Please read tests at the bottom of the source code for this module for examples on how to use
 /// it
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Clone)]
 pub struct CLSAG {
     /// This is the challenge generated non-interactievely
     pub challenge: Scalar,

@@ -16,6 +16,7 @@ use curve25519_dalek::traits::MultiscalarMul;
 ///
 /// Please read tests at the bottom of the source code for this module for examples on how to use
 /// it
+#[derive(Clone)]
 pub struct MLSAG {
     pub challenge: Scalar,
     pub responses: Vec<Vec<Scalar>>,

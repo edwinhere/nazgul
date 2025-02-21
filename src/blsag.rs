@@ -8,12 +8,13 @@ use digest::Digest;
 use rand_core::{CryptoRng, RngCore};
 use curve25519_dalek::traits::MultiscalarMul;
 
-/// Back’s Linkable Spontaneous Anonymous Group (bLSAG) signatures
+/// Back's Linkable Spontaneous Anonymous Group (bLSAG) signatures
 /// > This an enhanced version of the LSAG algorithm where linkability
-/// is independent of the ring’s decoy members.
+/// is independent of the ring's decoy members.
 ///
 /// Please read tests at the bottom of the source code for this module for examples on how to use
 /// it
+#[derive(Clone)]
 pub struct BLSAG {
     pub challenge: Scalar,
     pub responses: Vec<Scalar>,
