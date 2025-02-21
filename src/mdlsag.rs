@@ -1,15 +1,15 @@
-use crate::traits::{KeyImageGen, Link, Sign, Verify};
 use crate::prelude::*;
+use crate::traits::{KeyImageGen, Link, Sign, Verify};
 use curve25519_dalek::constants;
 use curve25519_dalek::ristretto::RistrettoPoint;
 use curve25519_dalek::scalar::Scalar;
+use curve25519_dalek::traits::MultiscalarMul;
 use digest::generic_array::typenum::U64;
 use digest::Digest;
 use rand_core::{CryptoRng, RngCore};
-use curve25519_dalek::traits::MultiscalarMul;
 
 #[cfg(feature = "serde")]
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 /// Multilayer Dual Linkable Spontaneous Anonymous Group Signature for Ad Hoc Groups
 ///
@@ -164,27 +164,25 @@ impl Sign<Vec<(Scalar, RistrettoPoint, Scalar)>, Vec<Vec<(RistrettoPoint, Ristre
                 hashes[(i + 1) % nr].update(
                     RistrettoPoint::multiscalar_mul(
                         &[rs[i % nr][j], cs[i % nr]],
-                        &[
-                            constants::RISTRETTO_BASEPOINT_POINT,
-                            ring[i % nr][j].0
-                        ]
+                        &[constants::RISTRETTO_BASEPOINT_POINT, ring[i % nr][j].0],
                     )
-                        .compress()
-                        .as_bytes(),
+                    .compress()
+                    .as_bytes(),
                 );
                 hashes[(i + 1) % nr].update(
                     RistrettoPoint::multiscalar_mul(
                         &[rs[i % nr][j], cs[i % nr]],
                         &[
-                            ring[i % nr][j].2 * RistrettoPoint::from_hash(
-                                Hash::default().chain_update(
-                                    ring[i % nr][j].1.compress().as_bytes()),
-                            ),
-                            key_images[j]
-                        ]
+                            ring[i % nr][j].2
+                                * RistrettoPoint::from_hash(
+                                    Hash::default()
+                                        .chain_update(ring[i % nr][j].1.compress().as_bytes()),
+                                ),
+                            key_images[j],
+                        ],
                     )
-                        .compress()
-                        .as_bytes(),
+                    .compress()
+                    .as_bytes(),
                 );
             }
             cs[(i + 1) % nr] = Scalar::from_hash(hashes[(i + 1) % nr].clone());
@@ -290,28 +288,25 @@ impl Sign<Vec<(RistrettoPoint, Scalar, Scalar)>, Vec<Vec<(RistrettoPoint, Ristre
                 hashes[(i + 1) % nr].update(
                     RistrettoPoint::multiscalar_mul(
                         &[rs[i % nr][j], cs[i % nr]],
-                        &[
-                            constants::RISTRETTO_BASEPOINT_POINT,
-                            ring[i % nr][j].1
-                        ]
+                        &[constants::RISTRETTO_BASEPOINT_POINT, ring[i % nr][j].1],
                     )
-                        .compress()
-                        .as_bytes(),
+                    .compress()
+                    .as_bytes(),
                 );
                 hashes[(i + 1) % nr].update(
                     RistrettoPoint::multiscalar_mul(
                         &[rs[i % nr][j], cs[i % nr]],
                         &[
-                            ring[i % nr][j].2 * RistrettoPoint::from_hash(
-                                Hash::default().chain_update(
-                                    ring[i % nr][j].0.compress().as_bytes()
-                                )
-                            ),
-                            key_images[j]
-                        ]
+                            ring[i % nr][j].2
+                                * RistrettoPoint::from_hash(
+                                    Hash::default()
+                                        .chain_update(ring[i % nr][j].0.compress().as_bytes()),
+                                ),
+                            key_images[j],
+                        ],
                     )
-                        .compress()
-                        .as_bytes(),
+                    .compress()
+                    .as_bytes(),
                 );
             }
             cs[(i + 1) % nr] = Scalar::from_hash(hashes[(i + 1) % nr].clone());
@@ -361,52 +356,53 @@ impl Verify for MDLSAG {
                             &[signature.responses[_i][j], reconstructed_c],
                             &[
                                 constants::RISTRETTO_BASEPOINT_POINT,
-                                signature.ring[_i][j].1
-                            ]
+                                signature.ring[_i][j].1,
+                            ],
                         )
-                            .compress()
-                            .as_bytes(),
+                        .compress()
+                        .as_bytes(),
                     );
 
                     h.update(
                         RistrettoPoint::multiscalar_mul(
                             &[signature.responses[_i][j], reconstructed_c],
                             &[
-                                signature.ring[_i][j].2 * RistrettoPoint::from_hash(
-                                    Hash::default().chain_update(
-                                        signature.ring[_i][j].0.compress().as_bytes()
-                                    )
-                                ),
-                                signature.key_images[j]
-                            ])
-                            .compress()
-                            .as_bytes(),
+                                signature.ring[_i][j].2
+                                    * RistrettoPoint::from_hash(Hash::default().chain_update(
+                                        signature.ring[_i][j].0.compress().as_bytes(),
+                                    )),
+                                signature.key_images[j],
+                            ],
+                        )
+                        .compress()
+                        .as_bytes(),
                     );
                 } else {
                     h.update(
                         RistrettoPoint::multiscalar_mul(
                             &[signature.responses[_i][j], reconstructed_c],
-                            &[constants::RISTRETTO_BASEPOINT_POINT, signature.ring[_i][j].0
-                            ]
+                            &[
+                                constants::RISTRETTO_BASEPOINT_POINT,
+                                signature.ring[_i][j].0,
+                            ],
                         )
-                            .compress()
-                            .as_bytes(),
+                        .compress()
+                        .as_bytes(),
                     );
 
                     h.update(
                         RistrettoPoint::multiscalar_mul(
                             &[signature.responses[_i][j], reconstructed_c],
                             &[
-                                signature.ring[_i][j].2 * RistrettoPoint::from_hash(
-                                    Hash::default().chain_update(
-                                        signature.ring[_i][j].1.compress().as_bytes()
-                                    )
-                                ),
-                                signature.key_images[j]
-                            ]
+                                signature.ring[_i][j].2
+                                    * RistrettoPoint::from_hash(Hash::default().chain_update(
+                                        signature.ring[_i][j].1.compress().as_bytes(),
+                                    )),
+                                signature.key_images[j],
+                            ],
                         )
-                            .compress()
-                            .as_bytes(),
+                        .compress()
+                        .as_bytes(),
                     );
                 }
             }
@@ -574,8 +570,12 @@ mod test {
         );
         let signature_2 =
             MDLSAG::sign::<Blake2b512, OsRng>(ks.clone(), ring.clone(), secret_index, &message);
-        let signature_3 =
-            MDLSAG::sign::<Blake2b512, OsRng>(other_ks.clone(), ring.clone(), secret_index, &message);
+        let signature_3 = MDLSAG::sign::<Blake2b512, OsRng>(
+            other_ks.clone(),
+            ring.clone(),
+            secret_index,
+            &message,
+        );
         let result_1 = MDLSAG::link(signature_1.clone(), signature_2);
         assert!(result_1);
         let result_2 = MDLSAG::link(signature_1.clone(), signature_3);

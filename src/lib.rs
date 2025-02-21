@@ -37,6 +37,6 @@ pub mod clsag;
 pub mod dlsag;
 pub mod mdlsag;
 pub mod mlsag;
+pub(crate) mod prelude;
 pub mod sag;
 pub mod traits;
-pub(crate) mod prelude;

@@ -1,15 +1,15 @@
-use crate::traits::{KeyImageGen, Link, Sign, Verify};
 use crate::prelude::*;
+use crate::traits::{KeyImageGen, Link, Sign, Verify};
 use curve25519_dalek::constants;
 use curve25519_dalek::ristretto::RistrettoPoint;
 use curve25519_dalek::scalar::Scalar;
+use curve25519_dalek::traits::MultiscalarMul;
 use digest::generic_array::typenum::U64;
 use digest::Digest;
 use rand_core::{CryptoRng, RngCore};
-use curve25519_dalek::traits::MultiscalarMul;
 
 #[cfg(feature = "serde")]
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 /// Back's Linkable Spontaneous Anonymous Group (bLSAG) signatures
 /// > This an enhanced version of the LSAG algorithm where linkability
@@ -34,8 +34,9 @@ impl KeyImageGen<Scalar, RistrettoPoint> for BLSAG {
     ) -> RistrettoPoint {
         let k_point: RistrettoPoint = k * constants::RISTRETTO_BASEPOINT_POINT;
 
-        let key_image: RistrettoPoint =
-            k * RistrettoPoint::from_hash(Hash::default().chain_update(k_point.compress().as_bytes()));
+        let key_image: RistrettoPoint = k * RistrettoPoint::from_hash(
+            Hash::default().chain_update(k_point.compress().as_bytes()),
+        );
 
         return key_image;
     }
@@ -83,9 +84,11 @@ impl Sign<Scalar, Vec<RistrettoPoint>> for BLSAG {
                 .as_bytes(),
         );
         hashes[(secret_index + 1) % n].update(
-            (a * RistrettoPoint::from_hash(Hash::default().chain_update(k_point.compress().as_bytes())))
-                .compress()
-                .as_bytes(),
+            (a * RistrettoPoint::from_hash(
+                Hash::default().chain_update(k_point.compress().as_bytes()),
+            ))
+            .compress()
+            .as_bytes(),
         );
         cs[(secret_index + 1) % n] = Scalar::from_hash(hashes[(secret_index + 1) % n].clone());
 
@@ -95,23 +98,23 @@ impl Sign<Scalar, Vec<RistrettoPoint>> for BLSAG {
             hashes[(i + 1) % n].update(
                 RistrettoPoint::multiscalar_mul(
                     &[rs[i % n], cs[i % n]],
-                    &[constants::RISTRETTO_BASEPOINT_POINT, ring[i % n]]
+                    &[constants::RISTRETTO_BASEPOINT_POINT, ring[i % n]],
                 )
-                    .compress()
-                    .as_bytes(),
+                .compress()
+                .as_bytes(),
             );
             hashes[(i + 1) % n].update(
                 RistrettoPoint::multiscalar_mul(
                     &[rs[i % n], cs[i % n]],
                     &[
                         RistrettoPoint::from_hash(
-                            Hash::default()
-                                .chain_update(ring[i % n].compress().as_bytes())
+                            Hash::default().chain_update(ring[i % n].compress().as_bytes()),
                         ),
-                        key_image
-                    ])
-                    .compress()
-                    .as_bytes(),
+                        key_image,
+                    ],
+                )
+                .compress()
+                .as_bytes(),
             );
             cs[(i + 1) % n] = Scalar::from_hash(hashes[(i + 1) % n].clone());
 
@@ -149,25 +152,24 @@ impl Verify for BLSAG {
             h.update(
                 RistrettoPoint::multiscalar_mul(
                     &[signature.responses[j], reconstructed_c],
-                    &[constants::RISTRETTO_BASEPOINT_POINT, signature.ring[j]]
+                    &[constants::RISTRETTO_BASEPOINT_POINT, signature.ring[j]],
                 )
-                    .compress()
-                    .as_bytes(),
+                .compress()
+                .as_bytes(),
             );
 
             h.update(
                 RistrettoPoint::multiscalar_mul(
                     &[signature.responses[j], reconstructed_c],
-                    &[RistrettoPoint::from_hash(
-                            Hash::default().chain_update(
-                                signature.ring[j].compress().as_bytes()
-                            ),
+                    &[
+                        RistrettoPoint::from_hash(
+                            Hash::default().chain_update(signature.ring[j].compress().as_bytes()),
                         ),
-                        signature.key_image
-                    ]
+                        signature.key_image,
+                    ],
                 )
-                    .compress()
-                    .as_bytes(),
+                .compress()
+                .as_bytes(),
             );
             reconstructed_c = Scalar::from_hash(h);
         }
@@ -224,7 +226,8 @@ mod test {
         }
 
         {
-            let signature = BLSAG::sign::<Blake2b512, OsRng>(k, ring.clone(), secret_index, &message);
+            let signature =
+                BLSAG::sign::<Blake2b512, OsRng>(k, ring.clone(), secret_index, &message);
             let result = BLSAG::verify::<Blake2b512>(signature, &message);
             assert!(result);
         }
@@ -234,8 +237,12 @@ mod test {
                 .map(|_| RistrettoPoint::random(&mut csprng))
                 .collect();
         let another_message: Vec<u8> = b"This is another message".iter().cloned().collect();
-        let signature_1 =
-            BLSAG::sign::<Blake2b512, OsRng>(k, another_ring.clone(), secret_index, &another_message);
+        let signature_1 = BLSAG::sign::<Blake2b512, OsRng>(
+            k,
+            another_ring.clone(),
+            secret_index,
+            &another_message,
+        );
         let signature_2 = BLSAG::sign::<Blake2b512, OsRng>(k, ring.clone(), secret_index, &message);
         let result = BLSAG::link(signature_1, signature_2);
         assert!(result);

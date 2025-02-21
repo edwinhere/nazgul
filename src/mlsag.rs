@@ -1,15 +1,15 @@
-use crate::traits::{KeyImageGen, Link, Sign, Verify};
 use crate::prelude::*;
+use crate::traits::{KeyImageGen, Link, Sign, Verify};
 use curve25519_dalek::constants;
 use curve25519_dalek::ristretto::RistrettoPoint;
 use curve25519_dalek::scalar::Scalar;
+use curve25519_dalek::traits::MultiscalarMul;
 use digest::generic_array::typenum::U64;
 use digest::Digest;
 use rand_core::{CryptoRng, RngCore};
-use curve25519_dalek::traits::MultiscalarMul;
 
 #[cfg(feature = "serde")]
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 /// Multilayer Linkable Spontaneous Anonymous Group (MLSAG) signatures
 /// > In order to sign transactions, one has to sign with multiple private keys. In
@@ -123,25 +123,23 @@ impl Sign<Vec<Scalar>, Vec<Vec<RistrettoPoint>>> for MLSAG {
                 hashes[(i + 1) % nr].update(
                     RistrettoPoint::multiscalar_mul(
                         &[rs[i % nr][j], cs[i % nr]],
-                        &[constants::RISTRETTO_BASEPOINT_POINT, ring[i % nr][j]]
+                        &[constants::RISTRETTO_BASEPOINT_POINT, ring[i % nr][j]],
                     )
-                        .compress()
-                        .as_bytes(),
+                    .compress()
+                    .as_bytes(),
                 );
                 hashes[(i + 1) % nr].update(
                     RistrettoPoint::multiscalar_mul(
                         &[rs[i % nr][j], cs[i % nr]],
                         &[
                             RistrettoPoint::from_hash(
-                                Hash::default().chain_update(
-                                    ring[i % nr][j].compress().as_bytes()
-                                ),
+                                Hash::default().chain_update(ring[i % nr][j].compress().as_bytes()),
                             ),
-                            key_images[j]
-                        ]
+                            key_images[j],
+                        ],
                     )
-                        .compress()
-                        .as_bytes(),
+                    .compress()
+                    .as_bytes(),
                 );
             }
             cs[(i + 1) % nr] = Scalar::from_hash(hashes[(i + 1) % nr].clone());
@@ -187,10 +185,10 @@ impl Verify for MLSAG {
                 h.update(
                     RistrettoPoint::multiscalar_mul(
                         &[signature.responses[_i][j], reconstructed_c],
-                        &[constants::RISTRETTO_BASEPOINT_POINT, signature.ring[_i][j]]
+                        &[constants::RISTRETTO_BASEPOINT_POINT, signature.ring[_i][j]],
                     )
-                        .compress()
-                        .as_bytes(),
+                    .compress()
+                    .as_bytes(),
                 );
 
                 h.update(
@@ -198,15 +196,14 @@ impl Verify for MLSAG {
                         &[signature.responses[_i][j], reconstructed_c],
                         &[
                             RistrettoPoint::from_hash(
-                                Hash::default().chain_update(
-                                    signature.ring[_i][j].compress().as_bytes()
-                                ),
+                                Hash::default()
+                                    .chain_update(signature.ring[_i][j].compress().as_bytes()),
                             ),
-                            signature.key_images[j]
-                        ]
+                            signature.key_images[j],
+                        ],
                     )
-                        .compress()
-                        .as_bytes(),
+                    .compress()
+                    .as_bytes(),
                 );
             }
             reconstructed_c = Scalar::from_hash(h);

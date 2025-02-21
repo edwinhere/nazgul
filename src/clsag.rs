@@ -1,15 +1,15 @@
-use crate::traits::{KeyImageGen, Link, Sign, Verify};
 use crate::prelude::*;
+use crate::traits::{KeyImageGen, Link, Sign, Verify};
 use curve25519_dalek::constants;
 use curve25519_dalek::ristretto::RistrettoPoint;
 use curve25519_dalek::scalar::Scalar;
+use curve25519_dalek::traits::MultiscalarMul;
 use digest::generic_array::typenum::U64;
 use digest::Digest;
 use rand_core::{CryptoRng, RngCore};
-use curve25519_dalek::traits::MultiscalarMul;
 
 #[cfg(feature = "serde")]
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 /// Concise Linkable Spontaneous Anonymous Group (CLSAG) signatures
 /// > CLSAG is sort of half-way between bLSAG and MLSAG. Suppose you have a 'primary' key, and
@@ -47,8 +47,9 @@ impl KeyImageGen<Vec<Scalar>, Vec<RistrettoPoint>> for CLSAG {
 
         // This is the base key
         // i.e. the first public key for which the prover has the private key
-        let base_key_hashed_to_point: RistrettoPoint =
-            RistrettoPoint::from_hash(Hash::default().chain_update(k_points[0].compress().as_bytes()));
+        let base_key_hashed_to_point: RistrettoPoint = RistrettoPoint::from_hash(
+            Hash::default().chain_update(k_points[0].compress().as_bytes()),
+        );
 
         let key_images: Vec<RistrettoPoint> =
             ks.iter().map(|k| k * base_key_hashed_to_point).collect();
@@ -83,8 +84,9 @@ impl Sign<Vec<Scalar>, Vec<Vec<RistrettoPoint>>> for CLSAG {
 
         // This is the base key
         // i.e. the first public key for which the prover has the private key
-        let base_key_hashed_to_point: RistrettoPoint =
-            RistrettoPoint::from_hash(Hash::default().chain_update(k_points[0].compress().as_bytes()));
+        let base_key_hashed_to_point: RistrettoPoint = RistrettoPoint::from_hash(
+            Hash::default().chain_update(k_points[0].compress().as_bytes()),
+        );
 
         let key_images: Vec<RistrettoPoint> = CLSAG::generate_key_image::<Hash>(ks.clone());
 
@@ -167,7 +169,8 @@ impl Sign<Vec<Scalar>, Vec<Vec<RistrettoPoint>>> for CLSAG {
                 .compress()
                 .as_bytes(),
         );
-        hashes[(secret_index + 1) % nr].update((a * base_key_hashed_to_point).compress().as_bytes());
+        hashes[(secret_index + 1) % nr]
+            .update((a * base_key_hashed_to_point).compress().as_bytes());
         cs[(secret_index + 1) % nr] = Scalar::from_hash(hashes[(secret_index + 1) % nr].clone());
 
         let mut i = (secret_index + 1) % nr;
@@ -178,26 +181,24 @@ impl Sign<Vec<Scalar>, Vec<Vec<RistrettoPoint>>> for CLSAG {
                     &[rs[i % nr], cs[i % nr]],
                     &[
                         constants::RISTRETTO_BASEPOINT_POINT,
-                        aggregate_public_keys[i % nr]
-                    ]
+                        aggregate_public_keys[i % nr],
+                    ],
                 )
-                    .compress()
-                    .as_bytes(),
+                .compress()
+                .as_bytes(),
             );
             hashes[(i + 1) % nr].update(
                 RistrettoPoint::multiscalar_mul(
                     &[rs[i % nr], cs[i % nr]],
                     &[
                         RistrettoPoint::from_hash(
-                            Hash::default().chain_update(
-                                ring[i % nr][0].compress().as_bytes()
-                            ),
+                            Hash::default().chain_update(ring[i % nr][0].compress().as_bytes()),
                         ),
-                        aggregate_key_image
-                    ]
+                        aggregate_key_image,
+                    ],
                 )
-                    .compress()
-                    .as_bytes(),
+                .compress()
+                .as_bytes(),
             );
             cs[(i + 1) % nr] = Scalar::from_hash(hashes[(i + 1) % nr].clone());
 
@@ -289,11 +290,11 @@ impl Verify for CLSAG {
                     &[signature.responses[_i], reconstructed_c],
                     &[
                         constants::RISTRETTO_BASEPOINT_POINT,
-                        aggregate_public_keys[_i]
-                    ]
+                        aggregate_public_keys[_i],
+                    ],
                 )
-                    .compress()
-                    .as_bytes(),
+                .compress()
+                .as_bytes(),
             );
 
             h.update(
@@ -301,15 +302,13 @@ impl Verify for CLSAG {
                     &[signature.responses[_i], reconstructed_c],
                     &[
                         RistrettoPoint::from_hash(
-                            Hash::new().chain_update(
-                                signature.ring[_i][0].compress().as_bytes()
-                            )
+                            Hash::new().chain_update(signature.ring[_i][0].compress().as_bytes()),
                         ),
-                        aggregate_key_image
-                    ]
+                        aggregate_key_image,
+                    ],
                 )
-                    .compress()
-                    .as_bytes(),
+                .compress()
+                .as_bytes(),
             );
             reconstructed_c = Scalar::from_hash(h);
         }
