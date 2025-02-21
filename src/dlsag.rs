@@ -48,7 +48,7 @@ impl KeyImageGen<(Scalar, RistrettoPoint, Scalar), RistrettoPoint> for DLSAG {
                 Hash::default().chain_update(k_point.1.compress().as_bytes()),
             );
 
-        return key_image;
+        key_image
     }
 }
 
@@ -67,7 +67,7 @@ impl KeyImageGen<(RistrettoPoint, Scalar, Scalar), RistrettoPoint> for DLSAG {
                 Hash::default().chain_update(k_point.0.compress().as_bytes()),
             );
 
-        return key_image;
+        key_image
     }
 }
 
@@ -93,7 +93,7 @@ impl Sign<(Scalar, RistrettoPoint, Scalar), Vec<(RistrettoPoint, RistrettoPoint,
         k: (Scalar, RistrettoPoint, Scalar),
         mut ring: Vec<(RistrettoPoint, RistrettoPoint, Scalar)>,
         secret_index: usize,
-        message: &Vec<u8>,
+        message: &[u8],
     ) -> DLSAG {
         let mut csprng = CSPRNG::default();
 
@@ -163,9 +163,9 @@ impl Sign<(Scalar, RistrettoPoint, Scalar), Vec<(RistrettoPoint, RistrettoPoint,
             );
             cs[(i + 1) % n] = Scalar::from_hash(hashes[(i + 1) % n].clone());
 
-            if secret_index >= 1 && i % n == (secret_index - 1) % n {
-                break;
-            } else if secret_index == 0 && i % n == n - 1 {
+            if (secret_index >= 1 && i % n == (secret_index - 1) % n)
+                || (secret_index == 0 && i % n == n - 1)
+            {
                 break;
             } else {
                 i = (i + 1) % n;
@@ -174,13 +174,13 @@ impl Sign<(Scalar, RistrettoPoint, Scalar), Vec<(RistrettoPoint, RistrettoPoint,
 
         rs[secret_index] = a - (cs[secret_index] * k.0);
 
-        return DLSAG {
+        DLSAG {
             challenge: cs[0],
             responses: rs,
-            ring: ring,
-            key_image: key_image,
+            ring,
+            key_image,
             b: false,
-        };
+        }
     }
 }
 
@@ -206,7 +206,7 @@ impl Sign<(RistrettoPoint, Scalar, Scalar), Vec<(RistrettoPoint, RistrettoPoint,
         k: (RistrettoPoint, Scalar, Scalar),
         mut ring: Vec<(RistrettoPoint, RistrettoPoint, Scalar)>,
         secret_index: usize,
-        message: &Vec<u8>,
+        message: &[u8],
     ) -> DLSAG {
         let mut csprng = CSPRNG::default();
 
@@ -276,9 +276,9 @@ impl Sign<(RistrettoPoint, Scalar, Scalar), Vec<(RistrettoPoint, RistrettoPoint,
             );
             cs[(i + 1) % n] = Scalar::from_hash(hashes[(i + 1) % n].clone());
 
-            if secret_index >= 1 && i % n == (secret_index - 1) % n {
-                break;
-            } else if secret_index == 0 && i % n == n - 1 {
+            if (secret_index >= 1 && i % n == (secret_index - 1) % n)
+                || (secret_index == 0 && i % n == n - 1)
+            {
                 break;
             } else {
                 i = (i + 1) % n;
@@ -287,13 +287,13 @@ impl Sign<(RistrettoPoint, Scalar, Scalar), Vec<(RistrettoPoint, RistrettoPoint,
 
         rs[secret_index] = a - (cs[secret_index] * k.1);
 
-        return DLSAG {
+        DLSAG {
             challenge: cs[0],
             responses: rs,
-            ring: ring,
-            key_image: key_image,
+            ring,
+            key_image,
             b: true,
-        };
+        }
     }
 }
 
@@ -301,7 +301,7 @@ impl Verify for DLSAG {
     /// To verify a `signature` you need the `message` too
     fn verify<Hash: Digest<OutputSize = U64> + Clone + Default>(
         signature: DLSAG,
-        message: &Vec<u8>,
+        message: &[u8],
     ) -> bool {
         let mut reconstructed_c: Scalar = signature.challenge;
         let n = signature.ring.len();
@@ -362,14 +362,14 @@ impl Verify for DLSAG {
             reconstructed_c = Scalar::from_hash(h);
         }
 
-        return signature.challenge == reconstructed_c;
+        signature.challenge == reconstructed_c
     }
 }
 
 impl Link for DLSAG {
     /// This is for linking two signatures and checking if they are signed by the same person
     fn link(signature_1: DLSAG, signature_2: DLSAG) -> bool {
-        return signature_1.key_image == signature_2.key_image;
+        signature_1.key_image == signature_2.key_image
     }
 }
 

@@ -29,11 +29,14 @@ pub struct SAG {
 impl Sign<Scalar, Vec<RistrettoPoint>> for SAG {
     /// To sign you need `k` your private key, and `ring` which is the public keys of everyone
     /// except you. You are signing the `message`
-    fn sign<Hash: Digest<OutputSize = U64> + Clone, CSPRNG: CryptoRng + RngCore + Default>(
+    fn sign<
+        Hash: Digest<OutputSize = U64> + Clone + Default,
+        CSPRNG: CryptoRng + RngCore + Default,
+    >(
         k: Scalar,
         mut ring: Vec<RistrettoPoint>,
         secret_index: usize,
-        message: &Vec<u8>,
+        message: &[u8],
     ) -> SAG {
         let mut csprng: CSPRNG = CSPRNG::default();
         let k_point: RistrettoPoint = k * constants::RISTRETTO_BASEPOINT_POINT;
@@ -65,26 +68,29 @@ impl Sign<Scalar, Vec<RistrettoPoint>> for SAG {
                 .as_bytes(),
             );
             cs[(i + 1) % n] = Scalar::from_hash(hashes[(i + 1) % n].clone());
-            if secret_index >= 1 && i % n == (secret_index - 1) % n {
-                break;
-            } else if secret_index == 0 && i % n == n - 1 {
+            if (secret_index >= 1 && i % n == (secret_index - 1) % n)
+                || (secret_index == 0 && i % n == n - 1)
+            {
                 break;
             } else {
                 i = (i + 1) % n;
             }
         }
         rs[secret_index] = a - (cs[secret_index] * k);
-        return SAG {
+        SAG {
             challenge: cs[0],
             responses: rs,
-            ring: ring,
-        };
+            ring,
+        }
     }
 }
 
 impl Verify for SAG {
     /// To verify a `signature` you need the `message` too
-    fn verify<Hash: Digest<OutputSize = U64> + Clone>(signature: SAG, message: &Vec<u8>) -> bool {
+    fn verify<Hash: Digest<OutputSize = U64> + Clone + Default>(
+        signature: SAG,
+        message: &[u8],
+    ) -> bool {
         let n = signature.ring.len();
         let mut reconstructed_c: Scalar = signature.challenge;
         let mut group_and_message_hash = Hash::new();
@@ -105,7 +111,7 @@ impl Verify for SAG {
             reconstructed_c = Scalar::from_hash(h);
         }
 
-        return signature.challenge == reconstructed_c;
+        signature.challenge == reconstructed_c
     }
 }
 

@@ -13,7 +13,7 @@ use serde::{Deserialize, Serialize};
 
 /// Back's Linkable Spontaneous Anonymous Group (bLSAG) signatures
 /// > This an enhanced version of the LSAG algorithm where linkability
-/// is independent of the ring's decoy members.
+/// > is independent of the ring's decoy members.
 ///
 /// Please read tests at the bottom of the source code for this module for examples on how to use
 /// it
@@ -38,7 +38,7 @@ impl KeyImageGen<Scalar, RistrettoPoint> for BLSAG {
             Hash::default().chain_update(k_point.compress().as_bytes()),
         );
 
-        return key_image;
+        key_image
     }
 }
 
@@ -52,7 +52,7 @@ impl Sign<Scalar, Vec<RistrettoPoint>> for BLSAG {
         k: Scalar,
         mut ring: Vec<RistrettoPoint>,
         secret_index: usize,
-        message: &Vec<u8>,
+        message: &[u8],
     ) -> BLSAG {
         let mut csprng = CSPRNG::default();
 
@@ -118,9 +118,9 @@ impl Sign<Scalar, Vec<RistrettoPoint>> for BLSAG {
             );
             cs[(i + 1) % n] = Scalar::from_hash(hashes[(i + 1) % n].clone());
 
-            if secret_index >= 1 && i % n == (secret_index - 1) % n {
-                break;
-            } else if secret_index == 0 && i % n == n - 1 {
+            if (secret_index >= 1 && i % n == (secret_index - 1) % n)
+                || (secret_index == 0 && i % n == n - 1)
+            {
                 break;
             } else {
                 i = (i + 1) % n;
@@ -129,12 +129,12 @@ impl Sign<Scalar, Vec<RistrettoPoint>> for BLSAG {
 
         rs[secret_index] = a - (cs[secret_index] * k);
 
-        return BLSAG {
+        BLSAG {
             challenge: cs[0],
             responses: rs,
-            ring: ring,
-            key_image: key_image,
-        };
+            ring,
+            key_image,
+        }
     }
 }
 
@@ -142,7 +142,7 @@ impl Verify for BLSAG {
     /// To verify a `signature` you need the `message` too
     fn verify<Hash: Digest<OutputSize = U64> + Clone + Default>(
         signature: BLSAG,
-        message: &Vec<u8>,
+        message: &[u8],
     ) -> bool {
         let mut reconstructed_c: Scalar = signature.challenge;
         let n = signature.ring.len();
@@ -174,14 +174,14 @@ impl Verify for BLSAG {
             reconstructed_c = Scalar::from_hash(h);
         }
 
-        return signature.challenge == reconstructed_c;
+        signature.challenge == reconstructed_c
     }
 }
 
 impl Link for BLSAG {
     /// This is for linking two signatures and checking if they are signed by the same person
     fn link(signature_1: BLSAG, signature_2: BLSAG) -> bool {
-        return signature_1.key_image == signature_2.key_image;
+        signature_1.key_image == signature_2.key_image
     }
 }
 

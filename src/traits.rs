@@ -1,4 +1,3 @@
-use crate::prelude::*;
 use digest::generic_array::typenum::U64;
 use digest::Digest;
 use rand_core::{CryptoRng, RngCore};
@@ -11,14 +10,14 @@ pub trait Sign<PrivateKey, Ring> {
         k: PrivateKey,
         ring: Ring,
         secret_index: usize,
-        message: &Vec<u8>,
+        message: &[u8],
     ) -> Self;
 }
 
 pub trait Verify {
     fn verify<Hash: Digest<OutputSize = U64> + Clone + Default>(
         signature: Self,
-        message: &Vec<u8>,
+        message: &[u8],
     ) -> bool;
 }
 

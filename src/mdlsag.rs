@@ -55,7 +55,7 @@ impl KeyImageGen<Vec<(Scalar, RistrettoPoint, Scalar)>, Vec<RistrettoPoint>> for
             })
             .collect();
 
-        return key_images;
+        key_images
     }
 }
 
@@ -82,7 +82,7 @@ impl KeyImageGen<Vec<(RistrettoPoint, Scalar, Scalar)>, Vec<RistrettoPoint>> for
             })
             .collect();
 
-        return key_images;
+        key_images
     }
 }
 
@@ -105,7 +105,7 @@ impl Sign<Vec<(Scalar, RistrettoPoint, Scalar)>, Vec<Vec<(RistrettoPoint, Ristre
         ks: Vec<(Scalar, RistrettoPoint, Scalar)>,
         mut ring: Vec<Vec<(RistrettoPoint, RistrettoPoint, Scalar)>>,
         secret_index: usize,
-        message: &Vec<u8>,
+        message: &[u8],
     ) -> MDLSAG {
         let mut csprng = CSPRNG::default();
 
@@ -139,7 +139,7 @@ impl Sign<Vec<(Scalar, RistrettoPoint, Scalar)>, Vec<Vec<(RistrettoPoint, Ristre
 
         let mut hashes: Vec<Hash> = (0..nr).map(|_| message_hash.clone()).collect();
 
-        for j in 0..nc {
+        for (j, _) in key_images.iter().enumerate().take(nc) {
             hashes[(secret_index + 1) % nr].update(
                 (a[j] * constants::RISTRETTO_BASEPOINT_POINT)
                     .compress()
@@ -160,11 +160,11 @@ impl Sign<Vec<(Scalar, RistrettoPoint, Scalar)>, Vec<Vec<(RistrettoPoint, Ristre
         let mut i = (secret_index + 1) % nr;
 
         loop {
-            for j in 0..nc {
+            for (j, _) in key_images.iter().enumerate().take(nc) {
                 hashes[(i + 1) % nr].update(
                     RistrettoPoint::multiscalar_mul(
                         &[rs[i % nr][j], cs[i % nr]],
-                        &[constants::RISTRETTO_BASEPOINT_POINT, ring[i % nr][j].0],
+                        &[constants::RISTRETTO_BASEPOINT_POINT, ring[i % nr][j].1],
                     )
                     .compress()
                     .as_bytes(),
@@ -176,7 +176,7 @@ impl Sign<Vec<(Scalar, RistrettoPoint, Scalar)>, Vec<Vec<(RistrettoPoint, Ristre
                             ring[i % nr][j].2
                                 * RistrettoPoint::from_hash(
                                     Hash::default()
-                                        .chain_update(ring[i % nr][j].1.compress().as_bytes()),
+                                        .chain_update(ring[i % nr][j].0.compress().as_bytes()),
                                 ),
                             key_images[j],
                         ],
@@ -187,26 +187,26 @@ impl Sign<Vec<(Scalar, RistrettoPoint, Scalar)>, Vec<Vec<(RistrettoPoint, Ristre
             }
             cs[(i + 1) % nr] = Scalar::from_hash(hashes[(i + 1) % nr].clone());
 
-            if secret_index >= 1 && i % nr == (secret_index - 1) % nr {
-                break;
-            } else if secret_index == 0 && i % nr == nr - 1 {
+            if (secret_index >= 1 && i % nr == (secret_index - 1) % nr)
+                || (secret_index == 0 && i % nr == nr - 1)
+            {
                 break;
             } else {
                 i = (i + 1) % nr;
             }
         }
 
-        for j in 0..nc {
+        for (j, _) in key_images.iter().enumerate().take(nc) {
             rs[secret_index][j] = a[j] - (cs[secret_index] * ks[j].0);
         }
 
-        return MDLSAG {
+        MDLSAG {
             challenge: cs[0],
             responses: rs,
-            ring: ring,
-            key_images: key_images,
+            ring,
+            key_images,
             b: false,
-        };
+        }
     }
 }
 
@@ -229,7 +229,7 @@ impl Sign<Vec<(RistrettoPoint, Scalar, Scalar)>, Vec<Vec<(RistrettoPoint, Ristre
         ks: Vec<(RistrettoPoint, Scalar, Scalar)>,
         mut ring: Vec<Vec<(RistrettoPoint, RistrettoPoint, Scalar)>>,
         secret_index: usize,
-        message: &Vec<u8>,
+        message: &[u8],
     ) -> MDLSAG {
         let mut csprng = CSPRNG::default();
 
@@ -263,7 +263,7 @@ impl Sign<Vec<(RistrettoPoint, Scalar, Scalar)>, Vec<Vec<(RistrettoPoint, Ristre
 
         let mut hashes: Vec<Hash> = (0..nr).map(|_| message_hash.clone()).collect();
 
-        for j in 0..nc {
+        for (j, _) in key_images.iter().enumerate().take(nc) {
             hashes[(secret_index + 1) % nr].update(
                 (a[j] * constants::RISTRETTO_BASEPOINT_POINT)
                     .compress()
@@ -284,7 +284,7 @@ impl Sign<Vec<(RistrettoPoint, Scalar, Scalar)>, Vec<Vec<(RistrettoPoint, Ristre
         let mut i = (secret_index + 1) % nr;
 
         loop {
-            for j in 0..nc {
+            for (j, _) in key_images.iter().enumerate().take(nc) {
                 hashes[(i + 1) % nr].update(
                     RistrettoPoint::multiscalar_mul(
                         &[rs[i % nr][j], cs[i % nr]],
@@ -311,26 +311,26 @@ impl Sign<Vec<(RistrettoPoint, Scalar, Scalar)>, Vec<Vec<(RistrettoPoint, Ristre
             }
             cs[(i + 1) % nr] = Scalar::from_hash(hashes[(i + 1) % nr].clone());
 
-            if secret_index >= 1 && i % nr == (secret_index - 1) % nr {
-                break;
-            } else if secret_index == 0 && i % nr == nr - 1 {
+            if (secret_index >= 1 && i % nr == (secret_index - 1) % nr)
+                || (secret_index == 0 && i % nr == nr - 1)
+            {
                 break;
             } else {
                 i = (i + 1) % nr;
             }
         }
 
-        for j in 0..nc {
+        for (j, _) in key_images.iter().enumerate().take(nc) {
             rs[secret_index][j] = a[j] - (cs[secret_index] * ks[j].1);
         }
 
-        return MDLSAG {
+        MDLSAG {
             challenge: cs[0],
             responses: rs,
-            ring: ring,
-            key_images: key_images,
+            ring,
+            key_images,
             b: true,
-        };
+        }
     }
 }
 
@@ -338,7 +338,7 @@ impl Verify for MDLSAG {
     /// To verify a `signature` you need the `message` too
     fn verify<Hash: Digest<OutputSize = U64> + Clone + Default>(
         signature: MDLSAG,
-        message: &Vec<u8>,
+        message: &[u8],
     ) -> bool {
         let mut reconstructed_c: Scalar = signature.challenge;
         // Row count of matrix
@@ -349,7 +349,7 @@ impl Verify for MDLSAG {
             let mut h: Hash = Hash::default();
             h.update(message);
 
-            for j in 0..nc {
+            for (j, _) in signature.key_images.iter().enumerate().take(nc) {
                 if signature.b {
                     h.update(
                         RistrettoPoint::multiscalar_mul(
@@ -409,7 +409,7 @@ impl Verify for MDLSAG {
             reconstructed_c = Scalar::from_hash(h);
         }
 
-        return signature.challenge == reconstructed_c;
+        signature.challenge == reconstructed_c
     }
 }
 
@@ -432,7 +432,7 @@ impl Link for MDLSAG {
                 .collect(),
         );
         vec.sort_unstable();
-        return vec.iter().zip(vec.iter().skip(1)).any(|(a, b)| a == b);
+        vec.iter().zip(vec.iter().skip(1)).any(|(a, b)| a == b)
     }
 }
 

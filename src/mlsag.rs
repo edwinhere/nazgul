@@ -13,9 +13,9 @@ use serde::{Deserialize, Serialize};
 
 /// Multilayer Linkable Spontaneous Anonymous Group (MLSAG) signatures
 /// > In order to sign transactions, one has to sign with multiple private keys. In
-/// [this paper](https://web.getmonero.org/resources/research-lab/pubs/MRL-0005.pdf),
-/// Shen Noether et al. describe a multi-layered generalization of the bLSAG signature
-/// scheme applicable when we have a set of n · m keys
+/// > [this paper](https://web.getmonero.org/resources/research-lab/pubs/MRL-0005.pdf),
+/// > Shen Noether et al. describe a multi-layered generalization of the bLSAG signature
+/// > scheme applicable when we have a set of n · m keys
 ///
 /// Please read tests at the bottom of the source code for this module for examples on how to use
 /// it
@@ -50,7 +50,7 @@ impl KeyImageGen<Vec<Scalar>, Vec<RistrettoPoint>> for MLSAG {
             })
             .collect();
 
-        return key_images;
+        key_images
     }
 }
 
@@ -65,7 +65,7 @@ impl Sign<Vec<Scalar>, Vec<Vec<RistrettoPoint>>> for MLSAG {
         ks: Vec<Scalar>,
         mut ring: Vec<Vec<RistrettoPoint>>,
         secret_index: usize,
-        message: &Vec<u8>,
+        message: &[u8],
     ) -> MLSAG {
         let mut csprng = CSPRNG::default();
 
@@ -119,7 +119,7 @@ impl Sign<Vec<Scalar>, Vec<Vec<RistrettoPoint>>> for MLSAG {
         let mut i = (secret_index + 1) % nr;
 
         loop {
-            for j in 0..nc {
+            for (j, key_image) in key_images.iter().enumerate().take(nc) {
                 hashes[(i + 1) % nr].update(
                     RistrettoPoint::multiscalar_mul(
                         &[rs[i % nr][j], cs[i % nr]],
@@ -135,7 +135,7 @@ impl Sign<Vec<Scalar>, Vec<Vec<RistrettoPoint>>> for MLSAG {
                             RistrettoPoint::from_hash(
                                 Hash::default().chain_update(ring[i % nr][j].compress().as_bytes()),
                             ),
-                            key_images[j],
+                            *key_image,
                         ],
                     )
                     .compress()
@@ -144,9 +144,9 @@ impl Sign<Vec<Scalar>, Vec<Vec<RistrettoPoint>>> for MLSAG {
             }
             cs[(i + 1) % nr] = Scalar::from_hash(hashes[(i + 1) % nr].clone());
 
-            if secret_index >= 1 && i % nr == (secret_index - 1) % nr {
-                break;
-            } else if secret_index == 0 && i % nr == nr - 1 {
+            if (secret_index >= 1 && i % nr == (secret_index - 1) % nr)
+                || (secret_index == 0 && i % nr == nr - 1)
+            {
                 break;
             } else {
                 i = (i + 1) % nr;
@@ -157,12 +157,12 @@ impl Sign<Vec<Scalar>, Vec<Vec<RistrettoPoint>>> for MLSAG {
             rs[secret_index][j] = a[j] - (cs[secret_index] * ks[j]);
         }
 
-        return MLSAG {
+        MLSAG {
             challenge: cs[0],
             responses: rs,
-            ring: ring,
-            key_images: key_images,
-        };
+            ring,
+            key_images,
+        }
     }
 }
 
@@ -170,7 +170,7 @@ impl Verify for MLSAG {
     /// To verify a `signature` you need the `message` too
     fn verify<Hash: Digest<OutputSize = U64> + Clone + Default>(
         signature: MLSAG,
-        message: &Vec<u8>,
+        message: &[u8],
     ) -> bool {
         let mut reconstructed_c: Scalar = signature.challenge;
         // Row count of matrix
@@ -181,7 +181,7 @@ impl Verify for MLSAG {
             let mut h: Hash = Hash::default();
             h.update(message);
 
-            for j in 0..nc {
+            for (j, key_image) in signature.key_images.iter().enumerate().take(nc) {
                 h.update(
                     RistrettoPoint::multiscalar_mul(
                         &[signature.responses[_i][j], reconstructed_c],
@@ -199,7 +199,7 @@ impl Verify for MLSAG {
                                 Hash::default()
                                     .chain_update(signature.ring[_i][j].compress().as_bytes()),
                             ),
-                            signature.key_images[j],
+                            *key_image,
                         ],
                     )
                     .compress()
@@ -209,7 +209,7 @@ impl Verify for MLSAG {
             reconstructed_c = Scalar::from_hash(h);
         }
 
-        return signature.challenge == reconstructed_c;
+        signature.challenge == reconstructed_c
     }
 }
 
@@ -232,7 +232,7 @@ impl Link for MLSAG {
                 .collect(),
         );
         vec.sort_unstable();
-        return vec.iter().zip(vec.iter().skip(1)).any(|(a, b)| a == b);
+        vec.iter().zip(vec.iter().skip(1)).any(|(a, b)| a == b)
     }
 }
 
