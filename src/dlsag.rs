@@ -10,6 +10,9 @@ use rand_core::{CryptoRng, RngCore};
 
 use crate::traits::{KeyImageGen, Link, Sign, Verify};
 
+#[cfg(feature = "serde")]
+use serde::{Serialize, Deserialize};
+
 /// Dual Linkable Spontaneous Anonymous Group Signature for Ad Hoc Groups
 ///
 /// [DLSAG: Non-Interactive Refund Transactions For Interoperable Payment Channels in Monero](https://eprint.iacr.org/2019/595.pdf)
@@ -19,8 +22,8 @@ use crate::traits::{KeyImageGen, Link, Sign, Verify};
 ///
 /// Read the paper on how to use it to implement payment channels.
 ///
-/// Please read tests at the bottom of the source code for this module for
-/// examples on how to use it
+/// Please read tests at the bottom of the source code for this module for examples on how to use it
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Clone)]
 pub struct DLSAG {
     pub challenge: Scalar,

@@ -8,6 +8,9 @@ use digest::Digest;
 use rand_core::{CryptoRng, RngCore};
 use curve25519_dalek::traits::MultiscalarMul;
 
+#[cfg(feature = "serde")]
+use serde::{Serialize, Deserialize};
+
 /// Multilayer Linkable Spontaneous Anonymous Group (MLSAG) signatures
 /// > In order to sign transactions, one has to sign with multiple private keys. In
 /// [this paper](https://web.getmonero.org/resources/research-lab/pubs/MRL-0005.pdf),
@@ -16,6 +19,8 @@ use curve25519_dalek::traits::MultiscalarMul;
 ///
 /// Please read tests at the bottom of the source code for this module for examples on how to use
 /// it
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Clone)]
 pub struct MLSAG {
     pub challenge: Scalar,
     pub responses: Vec<Vec<Scalar>>,

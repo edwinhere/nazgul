@@ -1,0 +1,46 @@
+name: Rust Tests
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@v2
+
+      - name: Run default feature tests
+        run: cargo test --verbose
+        
+      - name: Run serde tests
+        run: cargo test --features serde-derive --verbose
+
+      - name: Run no_std tests
+        run: cargo test --no-default-features --features no_std --verbose
+
+      - name: Check formatting
+        run: cargo fmt -- --check
+
+      - name: Run clippy
+        run: cargo clippy -- -D warnings
+
+      - name: Run clippy on no_std
+        run: cargo clippy --no-default-features --features no_std -- -D warnings
+
+      - name: Run clippy on serde
+        run: cargo clippy --features serde-derive -- -D warnings 

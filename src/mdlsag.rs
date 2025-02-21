@@ -8,6 +8,9 @@ use digest::Digest;
 use rand_core::{CryptoRng, RngCore};
 use curve25519_dalek::traits::MultiscalarMul;
 
+#[cfg(feature = "serde")]
+use serde::{Serialize, Deserialize};
+
 /// Multilayer Dual Linkable Spontaneous Anonymous Group Signature for Ad Hoc Groups
 ///
 /// [DLSAG: Non-Interactive Refund Transactions For Interoperable Payment Channels in Monero](https://eprint.iacr.org/2019/595.pdf)
@@ -19,7 +22,7 @@ use curve25519_dalek::traits::MultiscalarMul;
 ///
 /// Please read tests at the bottom of the source code for this module for
 /// examples on how to use it
-
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Clone)]
 pub struct MDLSAG {
     pub challenge: Scalar,
