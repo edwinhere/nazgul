@@ -105,49 +105,45 @@ impl Verify for SAG {
 }
 
 #[cfg(test)]
-#[cfg(feature = "std")]
 mod test {
-    extern crate blake2;
-    extern crate rand;
-    extern crate sha2;
-    extern crate sha3;
+    #[cfg(feature = "std")]
+    mod std_tests {
+        use super::super::*;
+        use blake2::Blake2b512;
+        use curve25519_dalek::ristretto::RistrettoPoint;
+        use curve25519_dalek::scalar::Scalar;
+        use rand::rngs::OsRng;
+        use sha2::Sha512;
+        use sha3::Keccak512;
 
-    use blake2::Blake2b512;
-    use curve25519_dalek::ristretto::RistrettoPoint;
-    use curve25519_dalek::scalar::Scalar;
-    use rand::rngs::OsRng;
-    use sha2::Sha512;
-    use sha3::Keccak512;
+        #[test]
+        fn sag() {
+            let mut csprng = OsRng::default();
+            let k: Scalar = Scalar::random(&mut csprng);
+            let secret_index = 1;
+            let n = 2;
+            let ring: Vec<RistrettoPoint> = (0..(n - 1)) // Prover is going to add our key into this mix
+                .map(|_| RistrettoPoint::random(&mut csprng))
+                .collect();
+            let message: Vec<u8> = b"This is the message".iter().cloned().collect();
 
-    use super::*;
+            {
+                let signature = SAG::sign::<Sha512, OsRng>(k, ring.clone(), secret_index, &message);
+                let result = SAG::verify::<Sha512>(signature, &message);
+                assert!(result);
+            }
 
-    #[test]
-    fn sag() {
-        let mut csprng = OsRng::default();
-        let k: Scalar = Scalar::random(&mut csprng);
-        let secret_index = 1;
-        let n = 2;
-        let ring: Vec<RistrettoPoint> = (0..(n - 1)) // Prover is going to add our key into this mix
-            .map(|_| RistrettoPoint::random(&mut csprng))
-            .collect();
-        let message: Vec<u8> = b"This is the message".iter().cloned().collect();
+            {
+                let signature = SAG::sign::<Keccak512, OsRng>(k, ring.clone(), secret_index, &message);
+                let result = SAG::verify::<Keccak512>(signature, &message);
+                assert!(result);
+            }
 
-        {
-            let signature = SAG::sign::<Sha512, OsRng>(k, ring.clone(), secret_index, &message);
-            let result = SAG::verify::<Sha512>(signature, &message);
-            assert!(result);
-        }
-
-        {
-            let signature = SAG::sign::<Keccak512, OsRng>(k, ring.clone(), secret_index, &message);
-            let result = SAG::verify::<Keccak512>(signature, &message);
-            assert!(result);
-        }
-
-        {
-            let signature = SAG::sign::<Blake2b512, OsRng>(k, ring.clone(), secret_index, &message);
-            let result = SAG::verify::<Blake2b512>(signature, &message);
-            assert!(result);
+            {
+                let signature = SAG::sign::<Blake2b512, OsRng>(k, ring.clone(), secret_index, &message);
+                let result = SAG::verify::<Blake2b512>(signature, &message);
+                assert!(result);
+            }
         }
     }
 }
