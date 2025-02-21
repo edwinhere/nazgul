@@ -6,10 +6,12 @@ A library that implements [Ring Signatures](https://en.wikipedia.org/wiki/Ring_s
  - Multilayer Linkable Spontaneous Anonymous Group (MLSAG) signatures
  - Concise Linkable Spontaneous Anonymous Group (CLSAG) signatures
 
-The following scheme has also been implemented from outside [Z2M2](https://www.getmonero.org/library/Zero-to-Monero-2-0-0.pdf):
+~~The following scheme has also been implemented from outside [Z2M2](https://www.getmonero.org/library/Zero-to-Monero-2-0-0.pdf):~~
 
- - [DLSAG: Non-Interactive Refund Transactions For Interoperable Payment Channels in Monero](https://eprint.iacr.org/2019/595.pdf)
- - Multilayer DLSAG
+ - ~~[DLSAG: Non-Interactive Refund Transactions For Interoperable Payment Channels in Monero](https://eprint.iacr.org/2019/595.pdf)~~
+
+Note: The MDLSAG (Multilayer Dual Linkable Spontaneous Anonymous Group) signature scheme was removed as its implementation did not correctly match the specifications in the [cited paper](https://eprint.iacr.org/2019/595.pdf).
+
 
 > All blockquotes (except this one) in this documentation are from [Z2M2](https://www.getmonero.org/library/Zero-to-Monero-2-0-0.pdf)
 

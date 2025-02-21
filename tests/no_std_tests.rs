@@ -7,7 +7,6 @@ use alloc::vec::Vec;
 use nazgul::blsag::BLSAG;
 use nazgul::clsag::CLSAG;
 use nazgul::dlsag::DLSAG;
-use nazgul::mdlsag::MDLSAG;
 use nazgul::mlsag::MLSAG;
 use nazgul::sag::SAG;
 use nazgul::traits::{Link, Sign, Verify};
@@ -142,56 +141,5 @@ fn test_mlsag_no_std() {
     let another_message: Vec<u8> = b"This is another message".iter().cloned().collect();
     let signature2 = MLSAG::sign::<Sha512, OsRng>(ks, ring.clone(), secret_index, &another_message);
     let link_result = MLSAG::link(signature, signature2);
-    assert!(link_result);
-}
-
-#[test]
-fn test_mdlsag_no_std() {
-    let mut csprng = OsRng;
-    let secret_index = 1;
-    let nr = 2;
-    let nc = 2;
-
-    let ks: Vec<(Scalar, RistrettoPoint, Scalar)> = (0..nc)
-        .map(|_| {
-            (
-                Scalar::random(&mut csprng),
-                RistrettoPoint::random(&mut csprng),
-                Scalar::random(&mut csprng),
-            )
-        })
-        .collect();
-
-    let other_ks: Vec<(RistrettoPoint, Scalar, Scalar)> =
-        ks.iter().map(|k| (k.1, k.0, k.2)).collect();
-
-    let ring: Vec<Vec<(RistrettoPoint, RistrettoPoint, Scalar)>> = (0..(nr - 1))
-        .map(|_| {
-            (0..nc)
-                .map(|_| {
-                    (
-                        RistrettoPoint::random(&mut csprng),
-                        RistrettoPoint::random(&mut csprng),
-                        Scalar::random(&mut csprng),
-                    )
-                })
-                .collect()
-        })
-        .collect();
-
-    let message: Vec<u8> = b"This is the message".iter().cloned().collect();
-
-    let signature = MDLSAG::sign::<Sha512, OsRng>(ks.clone(), ring.clone(), secret_index, &message);
-    let result = MDLSAG::verify::<Sha512>(signature.clone(), &message);
-    assert!(result);
-
-    // Test other end of channel
-    let signature2 =
-        MDLSAG::sign::<Sha512, OsRng>(other_ks.clone(), ring.clone(), secret_index, &message);
-    let result2 = MDLSAG::verify::<Sha512>(signature2.clone(), &message);
-    assert!(result2);
-
-    // Test linking
-    let link_result = MDLSAG::link(signature, signature2);
     assert!(link_result);
 }
