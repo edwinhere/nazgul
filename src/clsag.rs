@@ -8,6 +8,9 @@ use digest::Digest;
 use rand_core::{CryptoRng, RngCore};
 use curve25519_dalek::traits::MultiscalarMul;
 
+#[cfg(feature = "serde")]
+use serde::{Serialize, Deserialize};
+
 /// Concise Linkable Spontaneous Anonymous Group (CLSAG) signatures
 /// > CLSAG is sort of half-way between bLSAG and MLSAG. Suppose you have a ‘primary’ key, and
 /// associated with it are several ‘auxiliary’ keys. It is important to prove knowledge of all
@@ -16,6 +19,7 @@ use curve25519_dalek::traits::MultiscalarMul;
 ///
 /// Please read tests at the bottom of the source code for this module for examples on how to use
 /// it
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct CLSAG {
     /// This is the challenge generated non-interactievely
     pub challenge: Scalar,
