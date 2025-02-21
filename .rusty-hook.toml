@@ -1,5 +1,11 @@
 [hooks]
-pre-commit = "cargo test && cargo bump patch && git add Cargo.toml"
+pre-commit = """
+cargo test && \
+cargo test --features serde-derive && \
+cargo test --no-default-features --features no_std && \
+cargo bump patch && \
+git add Cargo.toml
+"""
 pre-push = "cargo package && cargo publish && echo"
 
 [logging]

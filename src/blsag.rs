@@ -8,12 +8,16 @@ use digest::Digest;
 use rand_core::{CryptoRng, RngCore};
 use curve25519_dalek::traits::MultiscalarMul;
 
+#[cfg(feature = "serde")]
+use serde::{Serialize, Deserialize};
+
 /// Back's Linkable Spontaneous Anonymous Group (bLSAG) signatures
 /// > This an enhanced version of the LSAG algorithm where linkability
 /// is independent of the ring's decoy members.
 ///
 /// Please read tests at the bottom of the source code for this module for examples on how to use
 /// it
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Clone)]
 pub struct BLSAG {
     pub challenge: Scalar,

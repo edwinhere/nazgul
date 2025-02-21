@@ -10,11 +10,16 @@ use rand_core::{CryptoRng, RngCore};
 
 use crate::traits::{Sign, Verify};
 
+#[cfg(feature = "serde")]
+use serde::{Serialize, Deserialize};
+
 /// Spontaneous Anonymous Group (SAG) signatures
 /// > This non-linkable ring signature that allows spontaneous groups, provided here for conceptual clarity
 ///
 /// Please read tests at the bottom of the source code for this module for examples on how to use
 /// it
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Clone)]
 pub struct SAG {
     pub challenge: Scalar,
     pub responses: Vec<Scalar>,
