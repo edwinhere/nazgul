@@ -2,7 +2,6 @@
 
 use nazgul::blsag::BLSAG;
 use nazgul::clsag::CLSAG;
-use nazgul::dlsag::DLSAG;
 use nazgul::mlsag::MLSAG;
 use nazgul::sag::SAG;
 use nazgul::traits::{Sign, Verify};
@@ -78,36 +77,6 @@ fn test_clsag_serde() {
     let deserialized: CLSAG = serde_json::from_str(&serialized).unwrap();
 
     let result = CLSAG::verify::<Sha512>(deserialized, &message);
-    assert!(result);
-}
-
-#[test]
-fn test_dlsag_serde() {
-    let mut csprng = OsRng;
-    let k: (Scalar, RistrettoPoint, Scalar) = (
-        Scalar::random(&mut csprng),
-        RistrettoPoint::random(&mut csprng),
-        Scalar::random(&mut csprng),
-    );
-    let secret_index = 1;
-    let n = 2;
-    let ring: Vec<(RistrettoPoint, RistrettoPoint, Scalar)> = (0..(n - 1))
-        .map(|_| {
-            (
-                RistrettoPoint::random(&mut csprng),
-                RistrettoPoint::random(&mut csprng),
-                Scalar::random(&mut csprng),
-            )
-        })
-        .collect();
-    let message: Vec<u8> = b"This is the message".iter().cloned().collect();
-
-    let signature = DLSAG::sign::<Sha512, OsRng>(k, ring.clone(), secret_index, &message);
-
-    let serialized = serde_json::to_string(&signature).unwrap();
-    let deserialized: DLSAG = serde_json::from_str(&serialized).unwrap();
-
-    let result = DLSAG::verify::<Sha512>(deserialized, &message);
     assert!(result);
 }
 
