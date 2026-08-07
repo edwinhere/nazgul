@@ -8,7 +8,7 @@ use nazgul::blsag::BLSAG;
 use nazgul::clsag::CLSAG;
 use nazgul::mlsag::MLSAG;
 use nazgul::sag::SAG;
-use nazgul::traits::{Link, Sign, Verify};
+use nazgul::traits::{Link, LinkRef, Sign, SignRef, Verify, VerifyRef};
 
 use curve25519_dalek::ristretto::RistrettoPoint;
 use curve25519_dalek::scalar::Scalar;
@@ -35,21 +35,23 @@ fn test_sag_no_std() {
 fn test_blsag_no_std() {
     let mut csprng = OsRng;
     let k: Scalar = Scalar::random(&mut csprng);
+    let k_point: RistrettoPoint = k * curve25519_dalek::constants::RISTRETTO_BASEPOINT_POINT;
     let secret_index = 1;
     let n = 2;
-    let ring: Vec<RistrettoPoint> = (0..(n - 1))
+    let mut ring: Vec<RistrettoPoint> = (0..(n - 1))
         .map(|_| RistrettoPoint::random(&mut csprng))
         .collect();
+    ring.insert(secret_index, k_point);
     let message: Vec<u8> = b"This is the message".iter().cloned().collect();
 
-    let signature = BLSAG::sign::<Sha512, OsRng>(k, ring.clone(), secret_index, &message);
-    let result = BLSAG::verify::<Sha512>(signature.clone(), &message);
+    let signature = BLSAG::sign::<Sha512, OsRng>(k, &ring, &message).unwrap();
+    let result = BLSAG::verify::<Sha512>(&signature, &ring, &message);
     assert!(result);
 
     // Test linking
     let another_message: Vec<u8> = b"This is another message".iter().cloned().collect();
-    let signature2 = BLSAG::sign::<Sha512, OsRng>(k, ring.clone(), secret_index, &another_message);
-    let link_result = BLSAG::link(signature, signature2);
+    let signature2 = BLSAG::sign::<Sha512, OsRng>(k, &ring, &another_message).unwrap();
+    let link_result = BLSAG::link(&signature, &signature2);
     assert!(link_result);
 }
 

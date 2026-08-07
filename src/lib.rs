@@ -35,6 +35,7 @@ extern crate rand_core;
 
 pub mod blsag;
 pub mod clsag;
+pub mod error;
 pub mod mlsag;
 pub(crate) mod prelude;
 pub mod sag;

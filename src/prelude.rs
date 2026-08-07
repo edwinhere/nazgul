@@ -6,3 +6,5 @@ pub use alloc::vec::Vec;
 
 #[cfg(feature = "std")]
 pub use std::vec::Vec;
+
+pub use crate::error::SignatureError;
