@@ -3,8 +3,9 @@
 use nazgul::blsag::BLSAG;
 use nazgul::clsag::CLSAG;
 use nazgul::mlsag::MLSAG;
+use nazgul::ring::Ring;
 use nazgul::sag::SAG;
-use nazgul::traits::{Sign, Verify};
+use nazgul::traits::{Sign, SignRef, Verify, VerifyRef};
 
 use curve25519_dalek::ristretto::RistrettoPoint;
 use curve25519_dalek::scalar::Scalar;
@@ -39,19 +40,21 @@ fn test_sag_serde() {
 fn test_blsag_serde() {
     let mut csprng = OsRng;
     let k: Scalar = Scalar::random(&mut csprng);
-    let secret_index = 1;
+    let k_point: RistrettoPoint = k * curve25519_dalek::constants::RISTRETTO_BASEPOINT_POINT;
     let n = 2;
-    let ring: Vec<RistrettoPoint> = (0..(n - 1))
+    let mut public_keys: Vec<RistrettoPoint> = (0..(n - 1))
         .map(|_| RistrettoPoint::random(&mut csprng))
         .collect();
+    public_keys.push(k_point);
+    let ring = Ring::new(public_keys);
     let message: Vec<u8> = b"This is the message".iter().cloned().collect();
 
-    let signature = BLSAG::sign::<Sha512, OsRng>(k, ring.clone(), secret_index, &message);
+    let signature = BLSAG::sign::<Sha512, OsRng>(k, &ring, None, &message).unwrap();
 
     let serialized = serde_json::to_string(&signature).unwrap();
     let deserialized: BLSAG = serde_json::from_str(&serialized).unwrap();
 
-    let result = BLSAG::verify::<Sha512>(deserialized, &message);
+    let result = BLSAG::verify::<Sha512>(&deserialized, &ring, None, &message);
     assert!(result);
 }
 

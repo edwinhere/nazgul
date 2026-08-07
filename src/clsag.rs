@@ -103,7 +103,7 @@ impl Sign<Vec<Scalar>, Vec<Vec<RistrettoPoint>>> for CLSAG {
         let prefixed_hashes: Vec<Hash> = (0..nc)
             .map(|index| {
                 let mut h: Hash = Hash::default();
-                h.update(format!("CSLAG_{}", index).as_bytes());
+                h.update(format!("CSLAG_{index}").as_bytes());
                 for row in ring.iter().take(nr) {
                     for key in row.iter().take(nc) {
                         h.update(key.compress().as_bytes());
@@ -237,7 +237,7 @@ impl Verify for CLSAG {
         let prefixed_hashes: Vec<Hash> = (0..nc)
             .map(|index| {
                 let mut h: Hash = Hash::default();
-                h.update(format!("CSLAG_{}", index).as_bytes());
+                h.update(format!("CSLAG_{index}").as_bytes());
                 for row in signature.ring.iter().take(nr) {
                     for key in row.iter().take(nc) {
                         h.update(key.compress().as_bytes());

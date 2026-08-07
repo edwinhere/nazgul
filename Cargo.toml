@@ -24,6 +24,7 @@ sha3 = { version = "^0.10", default-features = false }
 blake2 = { version = "^0.10", default-features = false }
 rand = { version = "^0.8", default-features = false, features = ["getrandom"] }
 serde_json = "1.0"
+criterion = "0.5"
 
 [features]
 default = ["std", "serde-derive"]
@@ -54,3 +55,8 @@ no_std = [
 name = "no_std_tests"
 path = "tests/no_std_tests.rs"
 required-features = ["no_std"]
+
+[[bench]]
+name = "blsag_benches"
+harness = false
+required-features = ["std"]
